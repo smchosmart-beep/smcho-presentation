@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { School, LogOut, UserPlus, Edit, Trash2 } from "lucide-react";
 import { z } from "zod";
 import type { Session } from "@supabase/supabase-js";
+import { SeatLayoutEditor } from "@/components/SeatLayoutEditor";
 
 const attendeeSchema = z.object({
   name: z.string().min(2, "이름은 최소 2자 이상이어야 합니다").max(50),
@@ -250,16 +252,23 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Attendees List */}
-        <Card className="card-elevated">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>참석자 목록</CardTitle>
-                <CardDescription>
-                  등록된 참석자를 관리하고 좌석을 배정하세요
-                </CardDescription>
-              </div>
+        {/* Tabs: Attendees List & Seat Layout */}
+        <Tabs defaultValue="attendees" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="attendees">참석자 목록</TabsTrigger>
+            <TabsTrigger value="seats">좌석 배치</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="attendees">
+            <Card className="card-elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>참석자 목록</CardTitle>
+                    <CardDescription>
+                      등록된 참석자를 관리하고 좌석을 배정하세요
+                    </CardDescription>
+                  </div>
               <Dialog open={isDialogOpen} onOpenChange={(open) => {
                 setIsDialogOpen(open);
                 if (!open) {
@@ -405,8 +414,14 @@ const AdminDashboard = () => {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="seats">
+            <SeatLayoutEditor />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

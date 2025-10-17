@@ -65,6 +65,36 @@ export type Database = {
         }
         Relationships: []
       }
+      seat_layout: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          row_label: string
+          seat_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          id?: string
+          is_active?: boolean
+          row_label: string
+          seat_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          row_label?: string
+          seat_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
