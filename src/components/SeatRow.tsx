@@ -24,7 +24,11 @@ export const SeatRow = ({ rowLabel, attendees, onSeatClick, highlightSeats = [] 
   const getSeatNumber = (num: number) => `${rowLabel}-${String(num).padStart(2, "0")}`;
 
   const getAssignedAttendee = (seatNumber: string) => {
-    return attendees.find((a) => a.seat_number === seatNumber);
+    return attendees.find((a) => {
+      if (!a.seat_number) return false;
+      const assignedSeats = a.seat_number.split(', ').map(s => s.trim());
+      return assignedSeats.includes(seatNumber);
+    });
   };
 
   return (

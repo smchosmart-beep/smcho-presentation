@@ -33,11 +33,11 @@ export const Seat = ({ seatNumber, assignedTo, onClick, className, isCurrentUser
           : `${seatNumber}: 빈 좌석`
       }
     >
-      {assignedTo ? (
-        <span className="truncate px-1">{assignedTo.split(" ")[0]}</span>
-      ) : (
-        <span className="text-muted-foreground">{seatNumber.split("-")[1]}</span>
-      )}
+      <span className={cn(
+        isAssigned ? "text-primary-foreground" : "text-muted-foreground"
+      )}>
+        {seatNumber.split("-")[1]}
+      </span>
     </button>
   );
 };
