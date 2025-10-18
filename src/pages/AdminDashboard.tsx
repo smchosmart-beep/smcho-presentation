@@ -17,8 +17,6 @@ import { SeatLayoutEditor } from "@/components/SeatLayoutEditor";
 const attendeeSchema = z.object({
   name: z.string().min(2, "이름은 최소 2자 이상이어야 합니다").max(50),
   phone: z.string().min(10).max(11),
-  attendee_count: z.number().min(1).max(10),
-  seat_number: z.string().optional(),
 });
 
 type Attendee = {
@@ -43,8 +41,6 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    attendee_count: 1,
-    seat_number: "",
   });
 
   useEffect(() => {
@@ -154,10 +150,7 @@ const AdminDashboard = () => {
     e.preventDefault();
 
     try {
-      const validated = attendeeSchema.parse({
-        ...formData,
-        seat_number: formData.seat_number || undefined,
-      });
+      const validated = attendeeSchema.parse(formData);
 
       if (editingAttendee) {
         const { error } = await supabase
@@ -165,8 +158,6 @@ const AdminDashboard = () => {
           .update({
             name: validated.name,
             phone: validated.phone,
-            attendee_count: validated.attendee_count,
-            seat_number: validated.seat_number || null,
           })
           .eq("id", editingAttendee.id);
 
@@ -178,8 +169,8 @@ const AdminDashboard = () => {
           .insert({
             name: validated.name,
             phone: validated.phone,
-            attendee_count: validated.attendee_count,
-            seat_number: validated.seat_number || null,
+            attendee_count: 1,
+            seat_number: null,
           });
 
         if (error) throw error;
@@ -188,7 +179,7 @@ const AdminDashboard = () => {
 
       setIsDialogOpen(false);
       setEditingAttendee(null);
-      setFormData({ name: "", phone: "", attendee_count: 1, seat_number: "" });
+      setFormData({ name: "", phone: "" });
       fetchAttendees();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -204,8 +195,6 @@ const AdminDashboard = () => {
     setFormData({
       name: attendee.name,
       phone: attendee.phone,
-      attendee_count: attendee.attendee_count,
-      seat_number: attendee.seat_number || "",
     });
     setIsDialogOpen(true);
   };
@@ -310,14 +299,14 @@ const AdminDashboard = () => {
                   <div>
                     <CardTitle>참석자 목록</CardTitle>
                     <CardDescription>
-                      등록된 참석자를 관리하고 좌석을 배정하세요
+                      등록된 참석자를 관리하세요. 참석자는 메인 페이지에서 인원을 입력하고 좌석을 자동 배정받습니다.
                     </CardDescription>
                   </div>
               <Dialog open={isDialogOpen} onOpenChange={(open) => {
                 setIsDialogOpen(open);
                 if (!open) {
                   setEditingAttendee(null);
-                  setFormData({ name: "", phone: "", attendee_count: 1, seat_number: "" });
+                  setFormData({ name: "", phone: "" });
                 }
               }}>
                 <DialogTrigger asChild>
@@ -332,7 +321,7 @@ const AdminDashboard = () => {
                       {editingAttendee ? "참석자 수정" : "참석자 추가"}
                     </DialogTitle>
                     <DialogDescription>
-                      참석자 정보를 입력하세요
+                      참석자의 이름과 전화번호를 입력하세요. 참석 인원과 좌석은 자동으로 배정됩니다.
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -361,37 +350,6 @@ const AdminDashboard = () => {
                         }
                         maxLength={11}
                         required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="count">참석 인원</Label>
-                      <Input
-                        id="count"
-                        type="number"
-                        min="1"
-                        max={maxAttendeeCount}
-                        value={formData.attendee_count}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            attendee_count: parseInt(e.target.value),
-                          })
-                        }
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        최대 {maxAttendeeCount}명까지 입력 가능합니다
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="seat">좌석 번호 (선택)</Label>
-                      <Input
-                        id="seat"
-                        value={formData.seat_number}
-                        onChange={(e) =>
-                          setFormData({ ...formData, seat_number: e.target.value })
-                        }
-                        placeholder="A-01"
                       />
                     </div>
                     <Button type="submit" className="w-full btn-primary">
