@@ -45,7 +45,7 @@ const Index = () => {
             {pair.map((seat) => (
               <span
                 key={seat}
-                className="text-3xl sm:text-4xl md:text-5xl font-bold text-gradient-primary px-3 py-2 border-2 border-primary/30 rounded-lg bg-primary/5"
+                className="text-xl sm:text-2xl md:text-3xl font-bold text-gradient-primary px-3 py-2 border-2 border-primary/30 rounded-lg bg-primary/5"
               >
                 [{seat}]
               </span>
