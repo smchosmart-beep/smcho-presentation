@@ -225,6 +225,10 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
+      // 좌석 레이아웃 생성 로직
+      let layoutsCreated = false;
+
+      // 1. 기존 회차에서 복사 시도
       if (currentSession) {
         const { data: previousLayouts } = await supabase
           .from("seat_layout")
@@ -241,7 +245,34 @@ const AdminDashboard = () => {
             is_active: true
           }));
 
-          await supabase.from("seat_layout").insert(newLayouts);
+          const { error: layoutError } = await supabase
+            .from("seat_layout")
+            .insert(newLayouts);
+
+          if (!layoutError) {
+            layoutsCreated = true;
+          }
+        }
+      }
+
+      // 2. 복사할 레이아웃이 없으면 기본 레이아웃 생성 (A~L행, 각 20석)
+      if (!layoutsCreated) {
+        const defaultRows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+        const defaultLayouts = defaultRows.map((label, index) => ({
+          session_id: newSession.id,
+          row_label: label,
+          seat_count: 20,
+          is_active: true,
+          display_order: index + 1,
+        }));
+
+        const { error: layoutError } = await supabase
+          .from("seat_layout")
+          .insert(defaultLayouts);
+
+        if (layoutError) {
+          console.error('Error creating default seat layout:', layoutError);
+          toast.error("좌석 레이아웃 생성 중 오류가 발생했습니다");
         }
       }
 
