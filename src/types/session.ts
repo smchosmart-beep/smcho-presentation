@@ -6,6 +6,7 @@ export type Session = {
   is_active: boolean;
   max_attendee_count: number;
   event_date: string | null;
+  event_time: string | null;
   created_at: string;
   updated_at: string;
 };

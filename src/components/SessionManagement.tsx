@@ -17,8 +17,8 @@ export const SessionManagement = ({ sessions, onActivate, onDelete }: SessionMan
         <TableRow>
           <TableHead>연도</TableHead>
           <TableHead>회차</TableHead>
-          <TableHead>이름</TableHead>
-          <TableHead>설명회 날짜</TableHead>
+          <TableHead>날짜</TableHead>
+          <TableHead>시간</TableHead>
           <TableHead>최대 동반 인원</TableHead>
           <TableHead>상태</TableHead>
           <TableHead>작업</TableHead>
@@ -36,12 +36,12 @@ export const SessionManagement = ({ sessions, onActivate, onDelete }: SessionMan
             <TableRow key={session.id}>
               <TableCell>{session.year}년</TableCell>
               <TableCell>{session.session_number}회차</TableCell>
-              <TableCell>{session.name}</TableCell>
               <TableCell>
                 {session.event_date
                   ? new Date(session.event_date).toLocaleDateString("ko-KR")
                   : "-"}
               </TableCell>
+              <TableCell>{session.event_time || "-"}</TableCell>
               <TableCell>{session.max_attendee_count}명</TableCell>
               <TableCell>
                 {session.is_active ? (

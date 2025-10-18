@@ -121,6 +121,7 @@ export type Database = {
         Row: {
           created_at: string | null
           event_date: string | null
+          event_time: string | null
           id: string
           is_active: boolean | null
           max_attendee_count: number | null
@@ -132,6 +133,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           event_date?: string | null
+          event_time?: string | null
           id?: string
           is_active?: boolean | null
           max_attendee_count?: number | null
@@ -143,6 +145,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           event_date?: string | null
+          event_time?: string | null
           id?: string
           is_active?: boolean | null
           max_attendee_count?: number | null
