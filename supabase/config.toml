@@ -1,1 +1,4 @@
 project_id = "ibufvuzhplsszxvstzkp"
+
+[functions.assign-seat]
+verify_jwt = false

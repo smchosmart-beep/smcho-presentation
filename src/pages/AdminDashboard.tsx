@@ -37,6 +37,8 @@ const AdminDashboard = () => {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null);
+  const [maxAttendeeCount, setMaxAttendeeCount] = useState(5);
+  const [loadingSettings, setLoadingSettings] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -48,6 +50,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     checkAuth();
     fetchAttendees();
+    fetchSettings();
 
     const {
       data: { subscription },
@@ -99,6 +102,46 @@ const AdminDashboard = () => {
     }
 
     setAttendees(data || []);
+  };
+
+  const fetchSettings = async () => {
+    const { data, error } = await supabase
+      .from("settings")
+      .select("max_attendee_count")
+      .single();
+
+    if (error) {
+      console.error("Failed to fetch settings:", error);
+      return;
+    }
+
+    if (data) {
+      setMaxAttendeeCount(data.max_attendee_count);
+    }
+  };
+
+  const updateMaxAttendeeCount = async (newMax: number) => {
+    if (newMax < 1 || newMax > 10) {
+      toast.error("참석 인원은 1명에서 10명 사이여야 합니다");
+      return;
+    }
+
+    setLoadingSettings(true);
+    const { error } = await supabase
+      .from("settings")
+      .update({ max_attendee_count: newMax })
+      .eq("id", (await supabase.from("settings").select("id").single()).data?.id);
+
+    setLoadingSettings(false);
+
+    if (error) {
+      toast.error("설정 업데이트에 실패했습니다");
+      console.error("Settings update error:", error);
+      return;
+    }
+
+    setMaxAttendeeCount(newMax);
+    toast.success("최대 참석 인원이 업데이트되었습니다");
   };
 
   const handleLogout = async () => {
@@ -252,11 +295,12 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Tabs: Attendees List & Seat Layout */}
+        {/* Tabs: Attendees List, Seat Layout & Settings */}
         <Tabs defaultValue="attendees" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-6">
             <TabsTrigger value="attendees">참석자 목록</TabsTrigger>
             <TabsTrigger value="seats">좌석 배치</TabsTrigger>
+            <TabsTrigger value="settings">설정</TabsTrigger>
           </TabsList>
 
           <TabsContent value="attendees">
@@ -325,7 +369,7 @@ const AdminDashboard = () => {
                         id="count"
                         type="number"
                         min="1"
-                        max="10"
+                        max={maxAttendeeCount}
                         value={formData.attendee_count}
                         onChange={(e) =>
                           setFormData({
@@ -335,6 +379,9 @@ const AdminDashboard = () => {
                         }
                         required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        최대 {maxAttendeeCount}명까지 입력 가능합니다
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="seat">좌석 번호 (선택)</Label>
@@ -420,6 +467,43 @@ const AdminDashboard = () => {
 
           <TabsContent value="seats">
             <SeatLayoutEditor />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card className="card-elevated max-w-2xl">
+              <CardHeader>
+                <CardTitle>참석 인원 설정</CardTitle>
+                <CardDescription>
+                  참석자가 신청할 수 있는 최대 인원을 설정하세요
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max-attendee">최대 참석 인원</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="max-attendee"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={maxAttendeeCount}
+                      onChange={(e) => setMaxAttendeeCount(Number(e.target.value))}
+                      className="max-w-xs"
+                    />
+                    <Button
+                      onClick={() => updateMaxAttendeeCount(maxAttendeeCount)}
+                      disabled={loadingSettings}
+                      className="btn-primary"
+                    >
+                      {loadingSettings ? "저장 중..." : "저장"}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    현재 설정: 최대 {maxAttendeeCount}명까지 신청 가능
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

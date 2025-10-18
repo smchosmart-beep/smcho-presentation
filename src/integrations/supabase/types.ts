@@ -95,6 +95,27 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          max_attendee_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_attendee_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_attendee_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
