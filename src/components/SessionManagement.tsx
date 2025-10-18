@@ -2,15 +2,16 @@ import { Session } from "@/types/session";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
-import { Trash2, Power } from "lucide-react";
+import { Trash2, Power, Edit } from "lucide-react";
 
 interface SessionManagementProps {
   sessions: Session[];
   onActivate: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
+  onEdit: (session: Session) => void;
 }
 
-export const SessionManagement = ({ sessions, onActivate, onDelete }: SessionManagementProps) => {
+export const SessionManagement = ({ sessions, onActivate, onDelete, onEdit }: SessionManagementProps) => {
   return (
     <Table>
       <TableHeader>
@@ -52,6 +53,13 @@ export const SessionManagement = ({ sessions, onActivate, onDelete }: SessionMan
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(session)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
                   {!session.is_active && (
                     <Button
                       variant="outline"
