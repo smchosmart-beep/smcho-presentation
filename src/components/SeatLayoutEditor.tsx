@@ -303,7 +303,7 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
           </div>
         </div>
         <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">현장등록 수</div>
+          <div className="text-sm text-muted-foreground">현장등록</div>
           <div className="text-2xl font-bold">{onsiteCount}</div>
         </div>
       </div>
