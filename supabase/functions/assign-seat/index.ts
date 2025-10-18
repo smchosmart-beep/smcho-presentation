@@ -66,14 +66,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Already has seat assigned
+    // Already has seat assigned - return success with existing data
     if (existingAttendee.seat_number) {
+      console.log('Seat already assigned, returning existing data');
       return new Response(
         JSON.stringify({ 
-          error: '이미 좌석이 배정되었습니다',
+          success: true,
+          already_assigned: true,
           data: existingAttendee
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -96,12 +96,15 @@ const Index = () => {
         console.error('Edge function error:', error);
       }
 
-      // Check for specific error messages from the edge function
+      // Check if seat is already assigned
+      if (data?.already_assigned && data?.data) {
+        setSeatInfo(data.data);
+        toast.info("이미 배정된 좌석입니다");
+        return;
+      }
+
+      // Check for other error messages
       if (data?.error) {
-        // If already assigned, show existing seat info
-        if (data.data) {
-          setSeatInfo(data.data);
-        }
         toast.error(data.error);
         return;
       }
