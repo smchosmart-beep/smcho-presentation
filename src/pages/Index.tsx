@@ -20,7 +20,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
-  const [attendeeCount, setAttendeeCount] = useState(1);
+  const [attendeeCount, setAttendeeCount] = useState("");
   const [maxAttendeeCount, setMaxAttendeeCount] = useState(5);
   const [loading, setLoading] = useState(false);
   const [seatInfo, setSeatInfo] = useState<{
@@ -75,7 +75,8 @@ const Index = () => {
     e.preventDefault();
     
     try {
-      const validated = registrationSchema.parse({ phone, name, attendee_count: attendeeCount });
+      const count = attendeeCount === "" ? 0 : parseInt(attendeeCount, 10);
+      const validated = registrationSchema.parse({ phone, name, attendee_count: count });
       
       if (validated.attendee_count > maxAttendeeCount) {
         toast.error(`참석 인원은 최대 ${maxAttendeeCount}명까지 가능합니다`);
@@ -119,7 +120,7 @@ const Index = () => {
         toast.success("좌석이 배정되었습니다!");
         setPhone("");
         setName("");
-        setAttendeeCount(1);
+        setAttendeeCount("");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -195,14 +196,16 @@ const Index = () => {
                   <Label htmlFor="attendee_count">참석 인원</Label>
                   <Input
                     id="attendee_count"
-                    type="number"
+                    type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     className="text-base h-12"
-                    placeholder="1"
+                    placeholder={`1~${maxAttendeeCount}명`}
                     value={attendeeCount}
-                    onChange={(e) => setAttendeeCount(Number(e.target.value))}
-                    min={1}
-                    max={maxAttendeeCount}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "");
+                      setAttendeeCount(value);
+                    }}
                     required
                   />
                   <p className="text-xs text-muted-foreground">
