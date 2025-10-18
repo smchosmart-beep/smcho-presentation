@@ -259,6 +259,15 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   }, 0);
   const totalSeats = layouts.length * 20;
   const onsiteCount = attendees.filter((a) => a.is_onsite_registration).length;
+  
+  // 사전 등록자 참가율 계산
+  const preRegisteredCount = attendees.filter(a => !a.is_onsite_registration).length;
+  const preRegisteredAttendedCount = attendees.filter(
+    a => !a.is_onsite_registration && a.seat_number !== null
+  ).length;
+  const attendanceRate = preRegisteredCount > 0 
+    ? ((preRegisteredAttendedCount / preRegisteredCount) * 100).toFixed(1)
+    : "0.0";
 
   if (loading) {
     return <div className="flex justify-center p-8">로딩 중...</div>;
@@ -281,6 +290,13 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
         <div className="bg-card p-4 rounded-lg border">
           <div className="text-sm text-muted-foreground">현장등록 수</div>
           <div className="text-2xl font-bold">{onsiteCount}</div>
+        </div>
+        <div className="bg-card p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">사전 등록자 참가율</div>
+          <div className="text-2xl font-bold">{attendanceRate}%</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {preRegisteredAttendedCount}/{preRegisteredCount}명
+          </div>
         </div>
       </div>
 
