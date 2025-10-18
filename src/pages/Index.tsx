@@ -172,7 +172,7 @@ const Index = () => {
             <p className="text-sm text-muted-foreground mt-2">
               {activeSession.session_number}회차
               {activeSession.event_date && ` (${new Date(activeSession.event_date).toLocaleDateString("ko-KR")}`}
-              {activeSession.event_time && `. ${activeSession.event_time.substring(0, 5)}~`}
+              {activeSession.event_time && ` ${activeSession.event_time.substring(0, 5)}~`}
               {activeSession.event_date && ')'}
             </p>
           )}
