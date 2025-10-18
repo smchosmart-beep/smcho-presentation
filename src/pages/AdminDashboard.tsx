@@ -803,7 +803,7 @@ const AdminDashboard = () => {
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="name">이름</Label>
+                            <Label htmlFor="name">아동명</Label>
                             <Input
                               id="name"
                               value={formData.name}
@@ -853,12 +853,12 @@ const AdminDashboard = () => {
                         
                         <form onSubmit={handleBulkSubmit} className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="bulk-names">이름 목록</Label>
+                            <Label htmlFor="bulk-names">아동명 목록</Label>
                             <Textarea
                               id="bulk-names"
                               rows={10}
                               className="font-mono text-sm"
-                              placeholder="엑셀에서 이름 열을 복사하여 붙여넣으세요&#10;예시:&#10;홍길동&#10;김철수&#10;이영희"
+                              placeholder="엑셀에서 아동명 열을 복사하여 붙여넣으세요&#10;예시:&#10;홍길동&#10;김철수&#10;이영희"
                               value={bulkData.names}
                               onChange={(e) => setBulkData(prev => ({ ...prev, names: e.target.value }))}
                               disabled={bulkProgress.isProcessing}
@@ -974,7 +974,7 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>이름</TableHead>
+                    <TableHead>아동명</TableHead>
                     <TableHead>전화번호</TableHead>
                     <TableHead>참석 인원</TableHead>
                     <TableHead>좌석 번호</TableHead>

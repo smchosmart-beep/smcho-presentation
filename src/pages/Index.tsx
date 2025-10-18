@@ -249,7 +249,7 @@ const Index = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name">이름</Label>
+                  <Label htmlFor="name">아동명</Label>
                   <Input
                     id="name"
                     type="text"
@@ -322,7 +322,7 @@ const Index = () => {
               </DialogHeader>
               <form onSubmit={handleOnSiteRegistration} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="onsite-name">이름</Label>
+                  <Label htmlFor="onsite-name">아동명</Label>
                   <Input
                     id="onsite-name"
                     type="text"
@@ -377,7 +377,7 @@ const Index = () => {
                       {renderSeatNumbers(seatInfo.seat_number)}
                       <div className="space-y-1 text-base">
                         <p className="text-foreground">
-                          <span className="font-semibold">이름:</span> {seatInfo.name}
+                          <span className="font-semibold">아동명:</span> {seatInfo.name}
                         </p>
                         <p className="text-foreground">
                           <span className="font-semibold">참석 인원:</span> {seatInfo.attendee_count}명
@@ -419,7 +419,7 @@ const Index = () => {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>• 사전 신청자 명단에 등록된 분만 좌석 배정이 가능합니다.</p>
-            <p>• 신청 때 입력하신 [전화번호]와 [학생이름]이 일치해야 합니다.</p>
+            <p>• 신청 때 입력하신 [전화번호]와 [아동명]이 일치해야 합니다.</p>
           </CardContent>
         </Card>
 
