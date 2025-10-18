@@ -284,6 +284,10 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
           </div>
         </div>
         <div className="bg-card p-4 rounded-lg border text-center">
+          <div className="text-sm text-muted-foreground">사전등록</div>
+          <div className="text-2xl font-bold">{preRegisteredCount}</div>
+        </div>
+        <div className="bg-card p-4 rounded-lg border text-center">
           <div className="text-sm text-muted-foreground">불참</div>
           <div className="text-2xl font-bold">{unassignedAttendees.length}</div>
         </div>
