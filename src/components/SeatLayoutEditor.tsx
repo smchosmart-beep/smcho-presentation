@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SeatRow } from "./SeatRow";
-import { Plus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -17,6 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SeatLayout {
   id: string;
@@ -39,6 +49,8 @@ export const SeatLayoutEditor = () => {
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [currentAttendee, setCurrentAttendee] = useState<Attendee | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<SeatLayout | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -169,6 +181,62 @@ export const SeatLayoutEditor = () => {
     }
   };
 
+  const handleDeleteRow = async () => {
+    const lastRow = layouts[layouts.length - 1];
+
+    if (lastRow.row_label <= "L") {
+      toast({
+        title: "삭제 불가",
+        description: "기본 행(A~L)은 삭제할 수 없습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const assignedSeatsInRow = attendees.filter((a) =>
+      a.seat_number?.startsWith(`${lastRow.row_label}-`)
+    );
+
+    if (assignedSeatsInRow.length > 0) {
+      setRowToDelete(lastRow);
+      setDeleteDialogOpen(true);
+    } else {
+      await deleteRow(lastRow);
+    }
+  };
+
+  const deleteRow = async (row: SeatLayout) => {
+    try {
+      const { error: unassignError } = await supabase
+        .from("attendees")
+        .update({ seat_number: null })
+        .like("seat_number", `${row.row_label}-%`);
+
+      if (unassignError) throw unassignError;
+
+      const { error: deleteError } = await supabase
+        .from("seat_layout")
+        .update({ is_active: false })
+        .eq("id", row.id);
+
+      if (deleteError) throw deleteError;
+
+      toast({
+        title: "행 삭제 완료",
+        description: `${row.row_label}행이 삭제되었습니다.`,
+      });
+
+      await fetchData();
+      setDeleteDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "오류",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const unassignedAttendees = attendees.filter((a) => !a.seat_number);
   const assignedCount = attendees.filter((a) => a.seat_number).length;
   const totalSeats = layouts.length * 20;
@@ -206,11 +274,20 @@ export const SeatLayoutEditor = () => {
           ))}
         </div>
 
-        {/* Add Row Button */}
-        <div className="flex justify-center mt-4">
+        {/* Add/Delete Row Buttons */}
+        <div className="flex justify-center gap-2 mt-4">
           <Button onClick={handleAddRow} variant="outline" size="sm">
             <Plus className="w-4 h-4 mr-2" />
             행 추가
+          </Button>
+          <Button
+            onClick={handleDeleteRow}
+            variant="outline"
+            size="sm"
+            disabled={layouts.length <= 12 || layouts[layouts.length - 1]?.row_label <= "L"}
+          >
+            <Minus className="w-4 h-4 mr-2" />
+            행 삭제
           </Button>
         </div>
       </div>
@@ -259,6 +336,41 @@ export const SeatLayoutEditor = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>행 삭제 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              {rowToDelete && (
+                <>
+                  <strong>{rowToDelete.row_label}행</strong>을 삭제하시겠습니까?
+                  {attendees.some((a) =>
+                    a.seat_number?.startsWith(`${rowToDelete.row_label}-`)
+                  ) && (
+                    <>
+                      <br />
+                      <span className="text-destructive">
+                        이 행에 배정된 좌석이 모두 해제됩니다.
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => rowToDelete && deleteRow(rowToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
