@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { School, MapPin, Users } from "lucide-react";
 import { z } from "zod";
@@ -31,6 +32,8 @@ const Index = () => {
     attendee_count: number;
     seat_number: string | null;
   } | null>(null);
+  const [isOnSiteRegistrationOpen, setIsOnSiteRegistrationOpen] = useState(false);
+  const [onSiteFormData, setOnSiteFormData] = useState({ name: "", phone: "" });
 
   const renderSeatNumbers = (seatNumberString: string) => {
     const seats = seatNumberString.split(', ');
@@ -156,6 +159,44 @@ const Index = () => {
     }
   };
 
+  const handleOnSiteRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!activeSession) {
+      toast.error("현재 진행 중인 입학설명회가 없습니다");
+      return;
+    }
+
+    try {
+      const validated = z.object({
+        name: z.string().min(2, "이름은 최소 2자 이상이어야 합니다").max(50),
+        phone: z.string().min(10, "올바른 전화번호를 입력해주세요").max(11)
+      }).parse(onSiteFormData);
+
+      const { error } = await supabase
+        .from("attendees")
+        .insert({
+          name: validated.name,
+          phone: validated.phone,
+          attendee_count: 0,
+          seat_number: null,
+          session_id: activeSession.id,
+        });
+
+      if (error) throw error;
+
+      toast.success("현장 등록이 완료되었습니다!");
+      setIsOnSiteRegistrationOpen(false);
+      setOnSiteFormData({ name: "", phone: "" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error("등록 중 오류가 발생했습니다");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
       <div className="container max-w-md mx-auto px-3 py-6">
@@ -246,9 +287,75 @@ const Index = () => {
                 >
                   {loading ? "신청 중..." : "좌석 확인"}
                 </Button>
+
+                {/* 현장 등록 안내 */}
+                <div className="text-center mt-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    사전 신청을 하지 않으셨나요?
+                  </p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-primary font-semibold p-0 h-auto"
+                    onClick={() => setIsOnSiteRegistrationOpen(true)}
+                  >
+                    현장등록하기
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
+
+          {/* 현장 등록 다이얼로그 */}
+          <Dialog open={isOnSiteRegistrationOpen} onOpenChange={(open) => {
+            setIsOnSiteRegistrationOpen(open);
+            if (!open) {
+              setOnSiteFormData({ name: "", phone: "" });
+            }
+          }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>현장 등록</DialogTitle>
+                <DialogDescription>
+                  참석자의 이름과 전화번호를 입력하세요
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleOnSiteRegistration} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="onsite-name">이름</Label>
+                  <Input
+                    id="onsite-name"
+                    type="text"
+                    className="text-base h-12"
+                    placeholder="홍길동"
+                    value={onSiteFormData.name}
+                    onChange={(e) => setOnSiteFormData({ ...onSiteFormData, name: e.target.value })}
+                    maxLength={50}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="onsite-phone">전화번호</Label>
+                  <Input
+                    id="onsite-phone"
+                    type="tel"
+                    className="text-base h-12"
+                    placeholder="01012345678"
+                    value={onSiteFormData.phone}
+                    onChange={(e) => setOnSiteFormData({
+                      ...onSiteFormData,
+                      phone: e.target.value.replace(/[^0-9]/g, "")
+                    })}
+                    maxLength={11}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 text-base btn-primary">
+                  등록
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           {/* Seat Info Display */}
           {seatInfo && (

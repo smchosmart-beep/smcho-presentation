@@ -407,7 +407,7 @@ const AdminDashboard = () => {
           .insert({
             name: validated.name,
             phone: validated.phone,
-            attendee_count: 1,
+            attendee_count: 0,
             seat_number: null,
             session_id: currentSession.id,
           });
@@ -563,7 +563,7 @@ const AdminDashboard = () => {
         const insertData = batch.map(item => ({
           name: item.name,
           phone: item.phone,
-          attendee_count: 1,
+          attendee_count: 0,
           seat_number: null,
           session_id: currentSession.id,
         }));
