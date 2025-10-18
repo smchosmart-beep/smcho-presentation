@@ -1,0 +1,20 @@
+name: Keep Database Active
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC (Weekly)
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Database
+        run: |
+          echo "Pinging database to keep it active..."
+          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/sessions?limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -w "\nHTTP Status: %{http_code}\n"
+          echo "Keep-alive ping completed successfully!"
