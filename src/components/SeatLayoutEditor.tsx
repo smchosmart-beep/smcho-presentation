@@ -41,6 +41,7 @@ interface Attendee {
   phone: string;
   seat_number: string | null;
   attendee_count: number;
+  is_onsite_registration: boolean;
 }
 
 interface SeatLayoutEditorProps {
@@ -257,6 +258,7 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
     return total;
   }, 0);
   const totalSeats = layouts.length * 20;
+  const onsiteCount = attendees.filter((a) => a.is_onsite_registration).length;
 
   if (loading) {
     return <div className="flex justify-center p-8">로딩 중...</div>;
@@ -275,6 +277,10 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
         <div className="bg-card p-4 rounded-lg border">
           <div className="text-sm text-muted-foreground">불참 가구 수</div>
           <div className="text-2xl font-bold">{unassignedAttendees.length}</div>
+        </div>
+        <div className="bg-card p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">현장등록 수</div>
+          <div className="text-2xl font-bold">{onsiteCount}</div>
         </div>
       </div>
 

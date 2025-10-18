@@ -181,6 +181,7 @@ const Index = () => {
           attendee_count: 0,
           seat_number: null,
           session_id: activeSession.id,
+          is_onsite_registration: true,
         });
 
       if (error) throw error;

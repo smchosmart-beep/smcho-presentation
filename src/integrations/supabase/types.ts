@@ -19,6 +19,7 @@ export type Database = {
           attendee_count: number
           created_at: string
           id: string
+          is_onsite_registration: boolean
           name: string
           phone: string
           seat_number: string | null
@@ -29,6 +30,7 @@ export type Database = {
           attendee_count?: number
           created_at?: string
           id?: string
+          is_onsite_registration?: boolean
           name: string
           phone: string
           seat_number?: string | null
@@ -39,6 +41,7 @@ export type Database = {
           attendee_count?: number
           created_at?: string
           id?: string
+          is_onsite_registration?: boolean
           name?: string
           phone?: string
           seat_number?: string | null
