@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { School, LogOut, UserPlus, Edit, Trash2 } from "lucide-react";
+import { School, LogOut, UserPlus, Edit, Trash2, Upload, AlertCircle, CheckCircle } from "lucide-react";
 import { z } from "zod";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import type { Session } from "@supabase/supabase-js";
 import { SeatLayoutEditor } from "@/components/SeatLayoutEditor";
 
@@ -41,6 +43,17 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+  });
+
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [bulkData, setBulkData] = useState({
+    names: "",
+    phones: ""
+  });
+  const [bulkProgress, setBulkProgress] = useState({
+    current: 0,
+    total: 0,
+    isProcessing: false
   });
 
   useEffect(() => {
@@ -216,6 +229,163 @@ const AdminDashboard = () => {
     fetchAttendees();
   };
 
+  const countLines = (text: string) => {
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .length;
+  };
+
+  const parseBulkData = (names: string, phones: string) => {
+    const nameList = names.split('\n')
+      .map(n => n.trim())
+      .filter(n => n.length > 0);
+    
+    const phoneList = phones.split('\n')
+      .map(p => p.replace(/[^0-9]/g, ''))
+      .filter(p => p.length >= 10);
+    
+    if (nameList.length !== phoneList.length) {
+      throw new Error(
+        `이름(${nameList.length}개)과 전화번호(${phoneList.length}개)의 개수가 일치하지 않습니다`
+      );
+    }
+    
+    if (nameList.length === 0) {
+      throw new Error('최소 1명 이상의 데이터를 입력해주세요');
+    }
+    
+    const validated = nameList.map((name, index) => {
+      try {
+        return attendeeSchema.parse({
+          name: name,
+          phone: phoneList[index]
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          throw new Error(
+            `${index + 1}번째 항목 오류: ${error.errors[0].message}\n이름: ${name}, 전화번호: ${phoneList[index]}`
+          );
+        }
+        throw error;
+      }
+    });
+    
+    return validated;
+  };
+
+  const BATCH_SIZE = 50;
+
+  const handleBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setBulkProgress({ current: 0, total: 0, isProcessing: true });
+      
+      const validated = parseBulkData(bulkData.names, bulkData.phones);
+      const total = validated.length;
+      
+      setBulkProgress({ current: 0, total, isProcessing: true });
+      
+      const batches = [];
+      for (let i = 0; i < validated.length; i += BATCH_SIZE) {
+        batches.push(validated.slice(i, i + BATCH_SIZE));
+      }
+      
+      let successCount = 0;
+      let failedItems: Array<{ name: string; phone: string; error: string }> = [];
+      
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        const insertData = batch.map(item => ({
+          name: item.name,
+          phone: item.phone,
+          attendee_count: 1,
+          seat_number: null
+        }));
+        
+        const { data, error } = await supabase
+          .from("attendees")
+          .insert(insertData)
+          .select();
+        
+        if (error) {
+          console.error(`Batch ${i + 1} error:`, error);
+          
+          if (error.code === '23505') {
+            for (const item of insertData) {
+              const { error: individualError } = await supabase
+                .from("attendees")
+                .insert(item)
+                .select();
+              
+              if (individualError) {
+                failedItems.push({
+                  name: item.name,
+                  phone: item.phone,
+                  error: individualError.message
+                });
+              } else {
+                successCount++;
+              }
+            }
+          } else {
+            batch.forEach(item => {
+              failedItems.push({
+                name: item.name,
+                phone: item.phone,
+                error: error.message
+              });
+            });
+          }
+        } else {
+          successCount += batch.length;
+        }
+        
+        setBulkProgress({ 
+          current: Math.min((i + 1) * BATCH_SIZE, total), 
+          total, 
+          isProcessing: true 
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setBulkProgress({ current: 0, total: 0, isProcessing: false });
+      
+      if (successCount === total) {
+        toast.success(`✅ ${total}명의 참석자가 모두 등록되었습니다`);
+      } else if (successCount > 0) {
+        toast.warning(
+          `⚠️ ${successCount}명 등록 완료, ${failedItems.length}명 실패`,
+          {
+            description: failedItems.length <= 5 
+              ? failedItems.map(f => `${f.name} (${f.phone})`).slice(0, 3).join(', ')
+              : `${failedItems.slice(0, 3).map(f => f.name).join(', ')} 외 ${failedItems.length - 3}명`,
+            duration: 10000
+          }
+        );
+      } else {
+        toast.error(`❌ 등록 실패: ${failedItems[0]?.error || '알 수 없는 오류'}`);
+      }
+      
+      if (successCount > 0) {
+        setIsBulkDialogOpen(false);
+        setBulkData({ names: "", phones: "" });
+        fetchAttendees();
+      }
+      
+    } catch (error) {
+      setBulkProgress({ current: 0, total: 0, isProcessing: false });
+      
+      if (error instanceof Error) {
+        toast.error(error.message, { duration: 8000 });
+      } else {
+        toast.error("일괄 등록 중 오류가 발생했습니다");
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -302,64 +472,187 @@ const AdminDashboard = () => {
                       사전 신청자 명단을 관리하세요. 참석자는 당일 현장에서 전화번호와 이름으로 좌석을 배정받습니다.
                     </CardDescription>
                   </div>
-              <Dialog open={isDialogOpen} onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) {
-                  setEditingAttendee(null);
-                  setFormData({ name: "", phone: "" });
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="btn-primary gap-2">
-                    <UserPlus className="w-4 h-4" />
-                    참석자 추가
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingAttendee ? "참석자 수정" : "참석자 추가"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      참석자의 이름과 전화번호를 입력하세요. 참석 인원과 좌석은 자동으로 배정됩니다.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">이름</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">전화번호</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            phone: e.target.value.replace(/[^0-9]/g, ""),
-                          })
-                        }
-                        maxLength={11}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full btn-primary">
-                      {editingAttendee ? "수정" : "등록"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                      setIsDialogOpen(open);
+                      if (!open) {
+                        setEditingAttendee(null);
+                        setFormData({ name: "", phone: "" });
+                      }
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button className="btn-primary gap-2">
+                          <UserPlus className="w-4 h-4" />
+                          참석자 추가
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingAttendee ? "참석자 수정" : "참석자 추가"}
+                          </DialogTitle>
+                          <DialogDescription>
+                            참석자의 이름과 전화번호를 입력하세요. 참석 인원과 좌석은 자동으로 배정됩니다.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">이름</Label>
+                            <Input
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) =>
+                                setFormData({ ...formData, name: e.target.value })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">전화번호</Label>
+                            <Input
+                              id="phone"
+                              type="tel"
+                              value={formData.phone}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  phone: e.target.value.replace(/[^0-9]/g, ""),
+                                })
+                              }
+                              maxLength={11}
+                              required
+                            />
+                          </div>
+                          <Button type="submit" className="w-full btn-primary">
+                            {editingAttendee ? "수정" : "등록"}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="gap-2">
+                          <Upload className="w-4 h-4" />
+                          일괄 추가
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>참석자 일괄 추가</DialogTitle>
+                          <DialogDescription>
+                            엑셀 파일에서 이름과 전화번호 열을 복사하여 붙여넣으세요
+                          </DialogDescription>
+                        </DialogHeader>
+                        
+                        <form onSubmit={handleBulkSubmit} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="bulk-names">이름 목록</Label>
+                            <Textarea
+                              id="bulk-names"
+                              rows={10}
+                              className="font-mono text-sm"
+                              placeholder="엑셀에서 이름 열을 복사하여 붙여넣으세요&#10;예시:&#10;홍길동&#10;김철수&#10;이영희"
+                              value={bulkData.names}
+                              onChange={(e) => setBulkData(prev => ({ ...prev, names: e.target.value }))}
+                              disabled={bulkProgress.isProcessing}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="bulk-phones">전화번호 목록</Label>
+                            <Textarea
+                              id="bulk-phones"
+                              rows={10}
+                              className="font-mono text-sm"
+                              placeholder="엑셀에서 전화번호 열을 복사하여 붙여넣으세요&#10;예시:&#10;01012345678&#10;01087654321&#10;01011112222"
+                              value={bulkData.phones}
+                              onChange={(e) => setBulkData(prev => ({ ...prev, phones: e.target.value }))}
+                              disabled={bulkProgress.isProcessing}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                            {(() => {
+                              const nameCount = countLines(bulkData.names);
+                              const phoneCount = countLines(bulkData.phones);
+                              const isMatched = nameCount === phoneCount && nameCount > 0;
+                              
+                              if (nameCount === 0 && phoneCount === 0) {
+                                return (
+                                  <>
+                                    <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                      데이터를 입력해주세요
+                                    </span>
+                                  </>
+                                );
+                              }
+                              
+                              if (!isMatched) {
+                                return (
+                                  <>
+                                    <AlertCircle className="w-4 h-4 text-destructive" />
+                                    <span className="text-sm text-destructive">
+                                      개수가 일치하지 않습니다 (이름 {nameCount}명, 전화번호 {phoneCount}명)
+                                    </span>
+                                  </>
+                                );
+                              }
+                              
+                              return (
+                                <>
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm">
+                                    📊 총 {nameCount}명의 참석자를 등록할 준비가 되었습니다
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                          
+                          {bulkProgress.isProcessing && (
+                            <div className="space-y-2">
+                              <Progress 
+                                value={(bulkProgress.current / bulkProgress.total) * 100} 
+                              />
+                              <p className="text-sm text-center text-muted-foreground">
+                                {bulkProgress.current} / {bulkProgress.total} 처리 중...
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setIsBulkDialogOpen(false);
+                                setBulkData({ names: "", phones: "" });
+                              }}
+                              disabled={bulkProgress.isProcessing}
+                            >
+                              취소
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={
+                                !(countLines(bulkData.names) === countLines(bulkData.phones) && countLines(bulkData.names) > 0) || 
+                                bulkProgress.isProcessing
+                              }
+                            >
+                              {bulkProgress.isProcessing 
+                                ? '등록 중...' 
+                                : `${countLines(bulkData.names)}명 일괄 등록`
+                              }
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
