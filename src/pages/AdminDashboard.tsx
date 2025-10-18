@@ -375,6 +375,38 @@ const AdminDashboard = () => {
     fetchAttendees();
   };
 
+  const handleDeleteAllAttendees = async () => {
+    if (!currentSession) {
+      toast.error("회차를 먼저 선택해주세요");
+      return;
+    }
+
+    if (attendees.length === 0) {
+      toast.error("삭제할 참석자가 없습니다");
+      return;
+    }
+
+    const confirmed = confirm(
+      `⚠️ 현재 회차(${currentSession.name})의 모든 참석자(${attendees.length}명)를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("attendees")
+        .delete()
+        .eq("session_id", currentSession.id);
+
+      if (error) throw error;
+
+      toast.success(`✅ ${attendees.length}명의 참석자가 모두 삭제되었습니다`);
+      fetchAttendees();
+    } catch (error: any) {
+      toast.error(`삭제 실패: ${error.message}`);
+    }
+  };
+
   const countLines = (text: string) => {
     return text.split('\n')
       .map(line => line.trim())
@@ -844,6 +876,16 @@ const AdminDashboard = () => {
                         </form>
                       </DialogContent>
                     </Dialog>
+
+                    <Button
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={handleDeleteAllAttendees}
+                      disabled={!currentSession || attendees.length === 0}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      전체 삭제
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
