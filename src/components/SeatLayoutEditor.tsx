@@ -275,39 +275,6 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="flex gap-4">
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">좌석 배치 현황</div>
-          <div className="text-2xl font-bold">
-            {assignedCount}/{totalSeats}
-          </div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">사전등록</div>
-          <div className="text-2xl font-bold">{preRegisteredCount}</div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">불참</div>
-          <div className="text-2xl font-bold">{unassignedAttendees.length}</div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">참여</div>
-          <div className="text-2xl font-bold">{preRegisteredAttendedCount}</div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">사전 등록자 참가율</div>
-          <div className="text-2xl font-bold">{attendanceRate}%</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {preRegisteredAttendedCount}/{preRegisteredCount} 가구
-          </div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border text-center">
-          <div className="text-sm text-muted-foreground">현장등록</div>
-          <div className="text-2xl font-bold">{onsiteCount}</div>
-        </div>
-      </div>
-
       {/* Seat Layout */}
       <div className="bg-card p-6 rounded-lg border overflow-x-auto">
         <div className="min-w-max">

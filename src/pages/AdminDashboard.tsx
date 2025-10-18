@@ -49,6 +49,7 @@ const AdminDashboard = () => {
   // Session management states
   const [sessions, setSessions] = useState<AppSession[]>([]);
   const [currentSession, setCurrentSession] = useState<AppSession | null>(null);
+  const [layouts, setLayouts] = useState<any[]>([]);
   const [isNewSessionDialogOpen, setIsNewSessionDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<AppSession | null>(null);
@@ -103,6 +104,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (currentSession) {
       fetchAttendees();
+      fetchLayouts();
     }
   }, [currentSession]);
 
@@ -149,6 +151,24 @@ const AdminDashboard = () => {
     if (activeSession) {
       setCurrentSession(activeSession);
     }
+  };
+
+  const fetchLayouts = async () => {
+    if (!currentSession) return;
+
+    const { data, error } = await supabase
+      .from("seat_layout")
+      .select("*")
+      .eq("session_id", currentSession.id)
+      .eq("is_active", true)
+      .order("display_order");
+
+    if (error) {
+      console.error("Failed to fetch layouts:", error);
+      return;
+    }
+
+    setLayouts(data || []);
   };
 
   const fetchAttendees = async () => {
@@ -728,37 +748,54 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="card-elevated">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">총 참석자</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-gradient-primary">
-                {attendees.length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="card-elevated">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">좌석 배정 완료</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-gradient-warm">
-                {attendees.filter((a) => a.seat_number).length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="card-elevated">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">총 참석 인원</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-secondary">
-                {attendees.reduce((sum, a) => sum + a.attendee_count, 0)}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="flex gap-4 mb-8 overflow-x-auto">
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">좌석 배치 현황</div>
+            <div className="text-2xl font-bold">
+              {attendees.reduce((total, attendee) => {
+                if (attendee.seat_number) {
+                  const seatCount = attendee.seat_number.split(',').map(s => s.trim()).filter(s => s).length;
+                  return total + seatCount;
+                }
+                return total;
+              }, 0)}/{layouts.length * 20}
+            </div>
+          </div>
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">사전등록</div>
+            <div className="text-2xl font-bold">
+              {attendees.filter(a => !a.is_onsite_registration).length}
+            </div>
+          </div>
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">불참</div>
+            <div className="text-2xl font-bold">
+              {attendees.filter((a) => !a.seat_number).length}
+            </div>
+          </div>
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">참여</div>
+            <div className="text-2xl font-bold">
+              {attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length}
+            </div>
+          </div>
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">사전 등록자 참가율</div>
+            <div className="text-2xl font-bold">
+              {attendees.filter(a => !a.is_onsite_registration).length > 0 
+                ? ((attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length / attendees.filter(a => !a.is_onsite_registration).length) * 100).toFixed(1)
+                : "0.0"}%
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length}/{attendees.filter(a => !a.is_onsite_registration).length} 가구
+            </div>
+          </div>
+          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+            <div className="text-sm text-muted-foreground">현장등록</div>
+            <div className="text-2xl font-bold">
+              {attendees.filter((a) => a.is_onsite_registration).length}
+            </div>
+          </div>
         </div>
 
         {/* Tabs: Attendees List, Seat Layout, Sessions & Settings */}
