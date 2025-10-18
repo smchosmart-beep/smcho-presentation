@@ -314,11 +314,8 @@ const Index = () => {
             <CardTitle>안내사항</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>• 사전 신청자 명단에 등록된 분만 좌석 배정이 가능합니다</p>
-            <p>• 전화번호와 이름이 일치해야 합니다</p>
-            <p>• 좌석은 신청 순서대로 A1부터 자동 배정됩니다</p>
-            <p>• 2명 이상 참석 시 같은 행에 연속으로 배정됩니다</p>
-            <p>• 설명회 시작 10분 전까지 입장을 완료해주시기 바랍니다</p>
+            <p>• 사전 신청자 명단에 등록된 분만 좌석 배정이 가능합니다.</p>
+            <p>• 신청 때 입력하신 [전화번호]와 [학생이름]이 일치해야 합니다.</p>
           </CardContent>
         </Card>
 
