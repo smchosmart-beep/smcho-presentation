@@ -204,6 +204,11 @@ const Index = () => {
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-2 mb-3">
+            <img 
+              src="/school-logo.jpg" 
+              alt="상명초등학교 로고" 
+              className="w-10 h-10 object-contain"
+            />
             <h1 className="text-3xl font-bold text-gradient-primary">
               상명초등학교
             </h1>
