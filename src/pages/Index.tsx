@@ -187,7 +187,7 @@ const Index = () => {
                 좌석 배치표 보기
               </CardTitle>
               <CardDescription>
-                이름과 전화번호, 참석 인원을 입력하여 좌석을 신청하세요
+                이름과 전화번호, 참석 인원을 입력하여 좌석을 확인하세요!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -238,9 +238,6 @@ const Index = () => {
                     }}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    최대 {maxAttendeeCount}명까지 신청 가능합니다
-                  </p>
                 </div>
                 <Button 
                   type="submit" 
