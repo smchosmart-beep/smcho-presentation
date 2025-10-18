@@ -18,9 +18,10 @@ interface Attendee {
 
 interface SeatLayoutViewerProps {
   highlightSeats: string[];
+  viewMode?: 'user' | 'admin';
 }
 
-export const SeatLayoutViewer = ({ highlightSeats }: SeatLayoutViewerProps) => {
+export const SeatLayoutViewer = ({ highlightSeats, viewMode = 'admin' }: SeatLayoutViewerProps) => {
   const [layouts, setLayouts] = useState<SeatLayout[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +76,7 @@ export const SeatLayoutViewer = ({ highlightSeats }: SeatLayoutViewerProps) => {
             <SeatRow
               key={layout.id}
               rowLabel={layout.row_label}
-              attendees={attendees}
+              attendees={viewMode === 'user' ? [] : attendees}
               onSeatClick={handleSeatClick}
               highlightSeats={highlightSeats}
             />

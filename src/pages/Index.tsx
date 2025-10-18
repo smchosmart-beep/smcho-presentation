@@ -267,7 +267,7 @@ const Index = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SeatLayoutViewer highlightSeats={seatInfo.seat_number.split(', ')} />
+                  <SeatLayoutViewer highlightSeats={seatInfo.seat_number.split(', ')} viewMode="user" />
                 </CardContent>
               </Card>
             </>
