@@ -767,13 +767,13 @@ const AdminDashboard = () => {
               {attendees.filter(a => !a.is_onsite_registration).length}
             </div>
           </div>
-          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+          <div className="bg-pink-50 dark:bg-pink-950/20 p-4 rounded-lg border text-center min-w-[140px]">
             <div className="text-sm text-muted-foreground">불참</div>
             <div className="text-2xl font-bold">
               {attendees.filter((a) => !a.seat_number).length}
             </div>
           </div>
-          <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
+          <div className="bg-sky-50 dark:bg-sky-950/20 p-4 rounded-lg border text-center min-w-[140px]">
             <div className="text-sm text-muted-foreground">참여</div>
             <div className="text-2xl font-bold">
               {attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length}
