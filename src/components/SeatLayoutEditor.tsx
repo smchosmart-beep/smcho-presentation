@@ -249,7 +249,13 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   };
 
   const unassignedAttendees = attendees.filter((a) => !a.seat_number);
-  const assignedCount = attendees.filter((a) => a.seat_number).length;
+  const assignedCount = attendees.reduce((total, attendee) => {
+    if (attendee.seat_number) {
+      const seatCount = attendee.seat_number.split(',').map(s => s.trim()).filter(s => s).length;
+      return total + seatCount;
+    }
+    return total;
+  }, 0);
   const totalSeats = layouts.length * 20;
 
   if (loading) {
