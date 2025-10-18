@@ -37,7 +37,7 @@ export const SeatRow = ({ rowLabel, attendees, onSeatClick, highlightSeats = [] 
 
       {/* Seat Groups */}
       {seatGroups.map((group, groupIndex) => (
-        <div key={groupIndex} className="flex gap-1">
+        <div key={groupIndex} className="flex gap-0.5">
           {group.map((seatNum) => {
             const seatNumber = getSeatNumber(seatNum);
             const attendee = getAssignedAttendee(seatNumber);

@@ -70,7 +70,7 @@ export const SeatLayoutViewer = ({ highlightSeats }: SeatLayoutViewerProps) => {
       </div>
 
       <div className="bg-card rounded-lg border overflow-x-auto">
-        <div className="min-w-max p-4">
+        <div className="min-w-max p-2">
           {layouts.map((layout) => (
             <SeatRow
               key={layout.id}
@@ -83,21 +83,21 @@ export const SeatLayoutViewer = ({ highlightSeats }: SeatLayoutViewerProps) => {
         </div>
       </div>
 
-      <div className="flex gap-4 justify-center flex-wrap text-xs">
+      <div className="flex gap-4 justify-center flex-wrap text-[10px] sm:text-xs">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-accent text-accent-foreground rounded border-2 border-accent flex items-center justify-center font-bold">
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-accent text-accent-foreground rounded border-2 border-accent flex items-center justify-center font-bold text-[10px]">
             ★
           </div>
           <span>내 좌석</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary text-primary-foreground rounded flex items-center justify-center">
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary text-primary-foreground rounded flex items-center justify-center text-[10px]">
             ✓
           </div>
           <span>배정됨</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-muted rounded border border-border" />
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-muted rounded border border-border" />
           <span>빈 좌석</span>
         </div>
       </div>

@@ -15,7 +15,7 @@ export const Seat = ({ seatNumber, assignedTo, onClick, className, isCurrentUser
     <button
       onClick={onClick}
       className={cn(
-        "w-12 h-12 rounded text-xs font-medium transition-all duration-200",
+        "w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded text-[10px] sm:text-xs font-medium transition-all duration-200",
         "flex items-center justify-center",
         "border border-border",
         isCurrentUser
