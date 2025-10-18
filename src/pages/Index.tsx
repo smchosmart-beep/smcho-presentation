@@ -184,7 +184,7 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary" />
-                좌석 신청하기
+                좌석 배치표 보기
               </CardTitle>
               <CardDescription>
                 이름과 전화번호, 참석 인원을 입력하여 좌석을 신청하세요
@@ -247,7 +247,7 @@ const Index = () => {
                   className="w-full h-12 text-base btn-primary"
                   disabled={loading}
                 >
-                  {loading ? "신청 중..." : "좌석 신청하기"}
+                  {loading ? "신청 중..." : "좌석 확인"}
                 </Button>
               </form>
             </CardContent>
