@@ -299,7 +299,7 @@ const AdminDashboard = () => {
                   <div>
                     <CardTitle>참석자 목록</CardTitle>
                     <CardDescription>
-                      등록된 참석자를 관리하세요. 참석자는 메인 페이지에서 인원을 입력하고 좌석을 자동 배정받습니다.
+                      사전 신청자 명단을 관리하세요. 참석자는 당일 현장에서 전화번호와 이름으로 좌석을 배정받습니다.
                     </CardDescription>
                   </div>
               <Dialog open={isDialogOpen} onOpenChange={(open) => {

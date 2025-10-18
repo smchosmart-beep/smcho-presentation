@@ -42,27 +42,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check for duplicate phone number
+    // Check if attendee is in pre-registered list (phone + name match)
     const { data: existingAttendee, error: checkError } = await supabase
       .from('attendees')
       .select('*')
       .eq('phone', phone)
+      .eq('name', name)
       .maybeSingle();
 
     if (checkError) {
       console.error('Error checking existing attendee:', checkError);
       return new Response(
-        JSON.stringify({ error: '중복 확인 중 오류가 발생했습니다' }),
+        JSON.stringify({ error: '명단 확인 중 오류가 발생했습니다' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (existingAttendee) {
+    // Not in pre-registered list
+    if (!existingAttendee) {
       return new Response(
-        JSON.stringify({ error: '이미 등록된 전화번호입니다' }),
+        JSON.stringify({ error: '사전 신청자 명단에 없습니다. 관리자에게 문의해주세요.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Already has seat assigned
+    if (existingAttendee.seat_number) {
+      return new Response(
+        JSON.stringify({ 
+          error: '이미 좌석이 배정되었습니다',
+          data: existingAttendee
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Valid pre-registered attendee without seat assignment
+    console.log('Valid pre-registered attendee, assigning seat:', existingAttendee.id);
 
     // Get active seat rows
     const { data: seatRows, error: rowsError } = await supabase
@@ -181,33 +197,32 @@ Deno.serve(async (req) => {
 
     console.log('Selected seats:', selectedSeats);
 
-    // Insert new attendee with assigned seats
+    // Update existing attendee with seat assignment
     const seatNumberString = selectedSeats.join(', ');
-    const { data: newAttendee, error: insertError } = await supabase
+    const { data: updatedAttendee, error: updateError } = await supabase
       .from('attendees')
-      .insert({
-        phone,
-        name,
+      .update({
         attendee_count,
         seat_number: seatNumberString,
       })
+      .eq('id', existingAttendee.id)
       .select()
       .single();
 
-    if (insertError || !newAttendee) {
-      console.error('Error inserting attendee:', insertError);
+    if (updateError || !updatedAttendee) {
+      console.error('Error updating attendee:', updateError);
       return new Response(
-        JSON.stringify({ error: '좌석 등록 중 오류가 발생했습니다' }),
+        JSON.stringify({ error: '좌석 배정 중 오류가 발생했습니다' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Successfully registered:', newAttendee);
+    console.log('Successfully assigned seat:', updatedAttendee);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: newAttendee 
+        data: updatedAttendee 
       }),
       { 
         status: 200, 
