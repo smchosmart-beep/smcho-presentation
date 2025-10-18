@@ -256,7 +256,7 @@ const Index = () => {
                     inputMode="text"
                     autoComplete="name"
                     className="text-base h-12"
-                    placeholder="홍길동"
+                    placeholder="김상명"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={50}
@@ -327,7 +327,7 @@ const Index = () => {
                     id="onsite-name"
                     type="text"
                     className="text-base h-12"
-                    placeholder="홍길동"
+                    placeholder="김상명"
                     value={onSiteFormData.name}
                     onChange={(e) => setOnSiteFormData({ ...onSiteFormData, name: e.target.value })}
                     maxLength={50}
