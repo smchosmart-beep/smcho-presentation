@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { School, MapPin, Users } from "lucide-react";
 import { z } from "zod";
 import { SeatLayoutViewer } from "@/components/SeatLayoutViewer";
+import type { Session } from "@/types/session";
 
 const registrationSchema = z.object({
   phone: z.string().min(10, "올바른 전화번호를 입력해주세요").max(11, "올바른 전화번호를 입력해주세요"),
@@ -23,6 +24,7 @@ const Index = () => {
   const [attendeeCount, setAttendeeCount] = useState("");
   const [maxAttendeeCount, setMaxAttendeeCount] = useState(5);
   const [loading, setLoading] = useState(false);
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [seatInfo, setSeatInfo] = useState<{
     name: string;
     phone: string;
@@ -57,6 +59,19 @@ const Index = () => {
   };
 
   useEffect(() => {
+    const fetchActiveSession = async () => {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!error && data) {
+        setActiveSession(data);
+        setMaxAttendeeCount(data.max_attendee_count);
+      }
+    };
+
     const fetchSettings = async () => {
       const { data, error } = await supabase
         .from("settings")
@@ -68,12 +83,18 @@ const Index = () => {
       }
     };
 
+    fetchActiveSession();
     fetchSettings();
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!activeSession) {
+      toast.error("현재 진행 중인 입학설명회가 없습니다");
+      return;
+    }
+
     try {
       const count = attendeeCount === "" ? 0 : parseInt(attendeeCount, 10);
       const validated = registrationSchema.parse({ phone, name, attendee_count: count });
@@ -90,6 +111,7 @@ const Index = () => {
           phone: validated.phone,
           name: validated.name,
           attendee_count: validated.attendee_count,
+          session_id: activeSession.id,
         },
       });
 
@@ -146,6 +168,12 @@ const Index = () => {
             </h1>
           </div>
           <p className="text-lg text-muted-foreground">입학설명회 좌석 안내</p>
+          {activeSession && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {activeSession.name}
+              {activeSession.event_date && ` (${new Date(activeSession.event_date).toLocaleDateString("ko-KR")})`}
+            </p>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -267,7 +295,11 @@ const Index = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SeatLayoutViewer highlightSeats={seatInfo.seat_number.split(', ')} viewMode="user" />
+                  <SeatLayoutViewer 
+                    highlightSeats={seatInfo.seat_number.split(', ')} 
+                    viewMode="user"
+                    sessionId={activeSession?.id}
+                  />
                 </CardContent>
               </Card>
             </>

@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { Session } from "@/types/session";
 
 interface SeatLayout {
   id: string;
@@ -42,7 +43,11 @@ interface Attendee {
   attendee_count: number;
 }
 
-export const SeatLayoutEditor = () => {
+interface SeatLayoutEditorProps {
+  currentSession: Session;
+}
+
+export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   const [layouts, setLayouts] = useState<SeatLayout[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +60,7 @@ export const SeatLayoutEditor = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentSession]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -64,9 +69,14 @@ export const SeatLayoutEditor = () => {
         supabase
           .from("seat_layout")
           .select("*")
+          .eq("session_id", currentSession.id)
           .eq("is_active", true)
           .order("display_order"),
-        supabase.from("attendees").select("*").order("name"),
+        supabase
+          .from("attendees")
+          .select("*")
+          .eq("session_id", currentSession.id)
+          .order("name"),
       ]);
 
       if (layoutsRes.error) throw layoutsRes.error;
@@ -162,6 +172,7 @@ export const SeatLayoutEditor = () => {
       const { error } = await supabase.from("seat_layout").insert({
         row_label: nextChar,
         display_order: lastRow.display_order + 1,
+        session_id: currentSession.id,
       });
 
       if (error) throw error;

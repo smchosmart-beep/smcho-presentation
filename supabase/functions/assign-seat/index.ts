@@ -9,6 +9,7 @@ interface RegistrationRequest {
   phone: string;
   name: string;
   attendee_count: number;
+  session_id: string;
 }
 
 Deno.serve(async (req) => {
@@ -23,12 +24,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const requestData: RegistrationRequest = await req.json();
-    const { phone, name, attendee_count } = requestData;
+    const { phone, name, attendee_count, session_id } = requestData;
 
-    console.log('Registration request:', { phone, name, attendee_count });
+    console.log('Registration request:', { phone, name, attendee_count, session_id });
 
     // Validate input
-    if (!phone || !name || !attendee_count) {
+    if (!phone || !name || !attendee_count || !session_id) {
       return new Response(
         JSON.stringify({ error: '모든 필드를 입력해주세요' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -42,12 +43,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if attendee is in pre-registered list (phone + name match)
+    // Check if attendee is in pre-registered list (phone + name + session match)
     const { data: existingAttendee, error: checkError } = await supabase
       .from('attendees')
       .select('*')
       .eq('phone', phone)
       .eq('name', name)
+      .eq('session_id', session_id)
       .maybeSingle();
 
     if (checkError) {
@@ -82,10 +84,11 @@ Deno.serve(async (req) => {
     // Valid pre-registered attendee without seat assignment
     console.log('Valid pre-registered attendee, assigning seat:', existingAttendee.id);
 
-    // Get active seat rows
+    // Get active seat rows for this session
     const { data: seatRows, error: rowsError } = await supabase
       .from('seat_layout')
       .select('*')
+      .eq('session_id', session_id)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
@@ -97,10 +100,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get all existing attendees with seat assignments
+    // Get all existing attendees with seat assignments for this session
     const { data: existingAttendees, error: attendeesError } = await supabase
       .from('attendees')
       .select('seat_number')
+      .eq('session_id', session_id)
       .not('seat_number', 'is', null);
 
     if (attendeesError) {

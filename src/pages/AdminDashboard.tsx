@@ -15,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import type { Session } from "@supabase/supabase-js";
 import { SeatLayoutEditor } from "@/components/SeatLayoutEditor";
+import { SessionManagement } from "@/components/SessionManagement";
+import type { Session as AppSession } from "@/types/session";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus } from "lucide-react";
 
 const attendeeSchema = z.object({
   name: z.string().min(2, "이름은 최소 2자 이상이어야 합니다").max(50),
@@ -40,6 +44,18 @@ const AdminDashboard = () => {
   const [maxAttendeeCount, setMaxAttendeeCount] = useState(5);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
+  // Session management states
+  const [sessions, setSessions] = useState<AppSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<AppSession | null>(null);
+  const [isNewSessionDialogOpen, setIsNewSessionDialogOpen] = useState(false);
+  const [newSessionForm, setNewSessionForm] = useState({
+    year: 2025,
+    session_number: 1,
+    name: "",
+    max_attendee_count: 5,
+    event_date: ""
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -58,7 +74,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     checkAuth();
-    fetchAttendees();
+    fetchSessions();
     fetchSettings();
 
     const {
@@ -72,6 +88,12 @@ const AdminDashboard = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (currentSession) {
+      fetchAttendees();
+    }
+  }, [currentSession]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -99,10 +121,32 @@ const AdminDashboard = () => {
     setLoading(false);
   };
 
+  const fetchSessions = async () => {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .order("year", { ascending: false })
+      .order("session_number", { ascending: false });
+
+    if (error) {
+      toast.error("회차 목록을 불러올 수 없습니다");
+      return;
+    }
+
+    setSessions(data || []);
+    const activeSession = data?.find(s => s.is_active);
+    if (activeSession) {
+      setCurrentSession(activeSession);
+    }
+  };
+
   const fetchAttendees = async () => {
+    if (!currentSession) return;
+
     const { data, error } = await supabase
       .from("attendees")
       .select("*")
+      .eq("session_id", currentSession.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -159,8 +203,109 @@ const AdminDashboard = () => {
     navigate("/admin/login");
   };
 
+  const handleCreateSession = async () => {
+    if (!newSessionForm.name.trim()) {
+      toast.error("회차 이름을 입력해주세요");
+      return;
+    }
+
+    try {
+      const { data: newSession, error } = await supabase
+        .from("sessions")
+        .insert({
+          year: newSessionForm.year,
+          session_number: newSessionForm.session_number,
+          name: newSessionForm.name,
+          max_attendee_count: newSessionForm.max_attendee_count,
+          event_date: newSessionForm.event_date || null,
+          is_active: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (currentSession) {
+        const { data: previousLayouts } = await supabase
+          .from("seat_layout")
+          .select("*")
+          .eq("session_id", currentSession.id)
+          .eq("is_active", true);
+
+        if (previousLayouts && previousLayouts.length > 0) {
+          const newLayouts = previousLayouts.map(layout => ({
+            row_label: layout.row_label,
+            seat_count: layout.seat_count,
+            display_order: layout.display_order,
+            session_id: newSession.id,
+            is_active: true
+          }));
+
+          await supabase.from("seat_layout").insert(newLayouts);
+        }
+      }
+
+      toast.success("새 회차가 생성되었습니다");
+      setIsNewSessionDialogOpen(false);
+      setNewSessionForm({
+        year: 2025,
+        session_number: 1,
+        name: "",
+        max_attendee_count: 5,
+        event_date: ""
+      });
+      fetchSessions();
+    } catch (error: any) {
+      toast.error(`오류: ${error.message}`);
+    }
+  };
+
+  const handleActivateSession = async (sessionId: string) => {
+    try {
+      await supabase
+        .from("sessions")
+        .update({ is_active: false })
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      const { error } = await supabase
+        .from("sessions")
+        .update({ is_active: true })
+        .eq("id", sessionId);
+
+      if (error) throw error;
+
+      toast.success("활성 회차가 변경되었습니다");
+      fetchSessions();
+    } catch (error: any) {
+      toast.error(`오류: ${error.message}`);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm("정말 삭제하시겠습니까? 관련된 모든 데이터가 삭제됩니다.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("sessions")
+        .delete()
+        .eq("id", sessionId);
+
+      if (error) throw error;
+
+      toast.success("회차가 삭제되었습니다");
+      fetchSessions();
+    } catch (error: any) {
+      toast.error(`오류: ${error.message}`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentSession) {
+      toast.error("회차를 먼저 선택해주세요");
+      return;
+    }
 
     try {
       const validated = attendeeSchema.parse(formData);
@@ -184,6 +329,7 @@ const AdminDashboard = () => {
             phone: validated.phone,
             attendee_count: 1,
             seat_number: null,
+            session_id: currentSession.id,
           });
 
         if (error) throw error;
@@ -279,6 +425,11 @@ const AdminDashboard = () => {
   const handleBulkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!currentSession) {
+      toast.error("회차를 먼저 선택해주세요");
+      return;
+    }
+
     try {
       setBulkProgress({ current: 0, total: 0, isProcessing: true });
       
@@ -301,7 +452,8 @@ const AdminDashboard = () => {
           name: item.name,
           phone: item.phone,
           attendee_count: 1,
-          seat_number: null
+          seat_number: null,
+          session_id: currentSession.id,
         }));
         
         const { data, error } = await supabase
@@ -409,6 +561,47 @@ const AdminDashboard = () => {
                 입학설명회 참석자 관리
               </p>
             </div>
+
+            {/* Session Selector */}
+            <div className="flex items-center gap-2 ml-6">
+              <Select
+                value={currentSession?.year.toString()}
+                onValueChange={(year) => {
+                  const sessionInYear = sessions.find(s => s.year === Number(year));
+                  if (sessionInYear) setCurrentSession(sessionInYear);
+                }}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="연도 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(new Set(sessions.map(s => s.year))).map(year => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}년
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={currentSession?.id}
+                onValueChange={(id) => {
+                  const selected = sessions.find(s => s.id === id);
+                  if (selected) setCurrentSession(selected);
+                }}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="회차 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sessions.filter(s => s.year === currentSession?.year).map(session => (
+                    <SelectItem key={session.id} value={session.id}>
+                      {session.session_number}회차 {session.is_active && "(활성)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Button
             variant="outline"
@@ -454,11 +647,12 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Tabs: Attendees List, Seat Layout & Settings */}
+        {/* Tabs: Attendees List, Seat Layout, Sessions & Settings */}
         <Tabs defaultValue="attendees" className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-6">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4 mb-6">
             <TabsTrigger value="attendees">참석자 목록</TabsTrigger>
             <TabsTrigger value="seats">좌석 배치</TabsTrigger>
+            <TabsTrigger value="sessions">회차 관리</TabsTrigger>
             <TabsTrigger value="settings">설정</TabsTrigger>
           </TabsList>
 
@@ -717,7 +911,41 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="seats">
-            <SeatLayoutEditor />
+            {currentSession ? (
+              <SeatLayoutEditor currentSession={currentSession} />
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  회차를 먼저 선택해주세요
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sessions">
+            <Card className="card-elevated">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>입학설명회 회차 관리</CardTitle>
+                    <CardDescription>
+                      연도별 회차를 생성하고 관리합니다
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setIsNewSessionDialogOpen(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    새 회차 생성
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <SessionManagement
+                  sessions={sessions}
+                  onActivate={handleActivateSession}
+                  onDelete={handleDeleteSession}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings">
@@ -757,6 +985,83 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* New Session Dialog */}
+        <Dialog open={isNewSessionDialogOpen} onOpenChange={setIsNewSessionDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>새 회차 생성</DialogTitle>
+              <DialogDescription>
+                입학설명회의 새 회차를 추가합니다
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="year">연도</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={newSessionForm.year}
+                  onChange={(e) => setNewSessionForm({ ...newSessionForm, year: Number(e.target.value) })}
+                  placeholder="2025"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="session_number">회차</Label>
+                <Input
+                  id="session_number"
+                  type="number"
+                  value={newSessionForm.session_number}
+                  onChange={(e) => setNewSessionForm({ ...newSessionForm, session_number: Number(e.target.value) })}
+                  placeholder="1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">회차 이름</Label>
+                <Input
+                  id="name"
+                  value={newSessionForm.name}
+                  onChange={(e) => setNewSessionForm({ ...newSessionForm, name: e.target.value })}
+                  placeholder="2025년 1회차"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="max_attendee_count">최대 동반 인원</Label>
+                <Input
+                  id="max_attendee_count"
+                  type="number"
+                  value={newSessionForm.max_attendee_count}
+                  onChange={(e) => setNewSessionForm({ ...newSessionForm, max_attendee_count: Number(e.target.value) })}
+                  placeholder="5"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="event_date">설명회 날짜 (선택)</Label>
+                <Input
+                  id="event_date"
+                  type="date"
+                  value={newSessionForm.event_date}
+                  onChange={(e) => setNewSessionForm({ ...newSessionForm, event_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setIsNewSessionDialogOpen(false)}>
+                취소
+              </Button>
+              <Button onClick={handleCreateSession}>
+                생성
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

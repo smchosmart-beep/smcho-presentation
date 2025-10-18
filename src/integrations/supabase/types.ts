@@ -22,6 +22,7 @@ export type Database = {
           name: string
           phone: string
           seat_number: string | null
+          session_id: string
           updated_at: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           name: string
           phone: string
           seat_number?: string | null
+          session_id: string
           updated_at?: string
         }
         Update: {
@@ -40,9 +42,18 @@ export type Database = {
           name?: string
           phone?: string
           seat_number?: string | null
+          session_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attendees_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -73,6 +84,7 @@ export type Database = {
           is_active: boolean
           row_label: string
           seat_count: number
+          session_id: string
           updated_at: string
         }
         Insert: {
@@ -82,6 +94,7 @@ export type Database = {
           is_active?: boolean
           row_label: string
           seat_count?: number
+          session_id: string
           updated_at?: string
         }
         Update: {
@@ -91,7 +104,52 @@ export type Database = {
           is_active?: boolean
           row_label?: string
           seat_count?: number
+          session_id?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_layout_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string | null
+          event_date: string | null
+          id: string
+          is_active: boolean | null
+          max_attendee_count: number | null
+          name: string
+          session_number: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          event_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_attendee_count?: number | null
+          name: string
+          session_number: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          event_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_attendee_count?: number | null
+          name?: string
+          session_number?: number
+          updated_at?: string | null
+          year?: number
         }
         Relationships: []
       }

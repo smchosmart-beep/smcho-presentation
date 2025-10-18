@@ -19,27 +19,40 @@ interface Attendee {
 interface SeatLayoutViewerProps {
   highlightSeats: string[];
   viewMode?: 'user' | 'admin';
+  sessionId?: string;
 }
 
-export const SeatLayoutViewer = ({ highlightSeats, viewMode = 'admin' }: SeatLayoutViewerProps) => {
+export const SeatLayoutViewer = ({ highlightSeats, viewMode = 'admin', sessionId }: SeatLayoutViewerProps) => {
   const [layouts, setLayouts] = useState<SeatLayout[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [sessionId]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      let layoutQuery = supabase
+        .from("seat_layout")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+
+      let attendeeQuery = supabase
+        .from("attendees")
+        .select("*")
+        .order("name");
+
+      if (sessionId) {
+        layoutQuery = layoutQuery.eq("session_id", sessionId);
+        attendeeQuery = attendeeQuery.eq("session_id", sessionId);
+      }
+
       const [layoutsRes, attendeesRes] = await Promise.all([
-        supabase
-          .from("seat_layout")
-          .select("*")
-          .eq("is_active", true)
-          .order("display_order"),
-        supabase.from("attendees").select("*").order("name"),
+        layoutQuery,
+        attendeeQuery
       ]);
 
       if (layoutsRes.error) throw layoutsRes.error;
