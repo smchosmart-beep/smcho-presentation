@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { School, MapPin, Users } from "lucide-react";
 import { z } from "zod";
+import { SeatLayoutViewer } from "@/components/SeatLayoutViewer";
 
 const registrationSchema = z.object({
   phone: z.string().min(10, "올바른 전화번호를 입력해주세요").max(11, "올바른 전화번호를 입력해주세요"),
@@ -192,40 +193,54 @@ const Index = () => {
 
           {/* Seat Info Display */}
           {seatInfo && (
-            <Card className="card-elevated">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-accent" />
-                  좌석 정보
-                </CardTitle>
-                <CardDescription>
-                  배정된 좌석을 확인하세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4 animate-fade-in">
-                  <div className="text-center p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg border-2 border-primary/20">
-                    <p className="text-sm text-muted-foreground mb-2">배정된 좌석</p>
-                    <p className="text-5xl font-bold text-gradient-primary mb-4">
-                      {seatInfo.seat_number}
-                    </p>
-                    <div className="space-y-1 text-base">
-                      <p className="text-foreground">
-                        <span className="font-semibold">이름:</span> {seatInfo.name}
+            <>
+              <Card className="card-elevated">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-accent" />
+                    좌석 정보
+                  </CardTitle>
+                  <CardDescription>
+                    배정된 좌석을 확인하세요
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="text-center p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg border-2 border-primary/20">
+                      <p className="text-sm text-muted-foreground mb-2">배정된 좌석</p>
+                      <p className="text-5xl font-bold text-gradient-primary mb-4">
+                        {seatInfo.seat_number}
                       </p>
-                      <p className="text-foreground">
-                        <span className="font-semibold">참석 인원:</span> {seatInfo.attendee_count}명
+                      <div className="space-y-1 text-base">
+                        <p className="text-foreground">
+                          <span className="font-semibold">이름:</span> {seatInfo.name}
+                        </p>
+                        <p className="text-foreground">
+                          <span className="font-semibold">참석 인원:</span> {seatInfo.attendee_count}명
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-4 text-sm text-center">
+                      <p className="text-muted-foreground">
+                        입학설명회장에서 해당 좌석으로 이동해주세요
                       </p>
                     </div>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-4 text-sm text-center">
-                    <p className="text-muted-foreground">
-                      입학설명회장에서 해당 좌석으로 이동해주세요
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="card-elevated">
+                <CardHeader>
+                  <CardTitle className="text-center">좌석 배치도</CardTitle>
+                  <CardDescription className="text-center">
+                    내 좌석 위치를 확인하세요
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SeatLayoutViewer highlightSeats={seatInfo.seat_number.split(', ')} />
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
 

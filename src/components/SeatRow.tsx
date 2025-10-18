@@ -10,9 +10,10 @@ interface SeatRowProps {
   rowLabel: string;
   attendees: Attendee[];
   onSeatClick: (seatNumber: string, currentAttendee?: Attendee) => void;
+  highlightSeats?: string[];
 }
 
-export const SeatRow = ({ rowLabel, attendees, onSeatClick }: SeatRowProps) => {
+export const SeatRow = ({ rowLabel, attendees, onSeatClick, highlightSeats = [] }: SeatRowProps) => {
   const seatGroups = [
     [1, 2, 3, 4, 5],
     [6, 7, 8, 9, 10],
@@ -46,6 +47,7 @@ export const SeatRow = ({ rowLabel, attendees, onSeatClick }: SeatRowProps) => {
                 seatNumber={seatNumber}
                 assignedTo={attendee?.name}
                 onClick={() => onSeatClick(seatNumber, attendee)}
+                isCurrentUser={highlightSeats.includes(seatNumber)}
               />
             );
           })}
