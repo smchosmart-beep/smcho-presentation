@@ -295,7 +295,7 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
           <div className="text-sm text-muted-foreground">사전 등록자 참가율</div>
           <div className="text-2xl font-bold">{attendanceRate}%</div>
           <div className="text-xs text-muted-foreground mt-1">
-            {preRegisteredAttendedCount}/{preRegisteredCount}명
+            {preRegisteredAttendedCount}/{preRegisteredCount} 가구
           </div>
         </div>
       </div>
