@@ -170,8 +170,10 @@ const Index = () => {
           <p className="text-lg text-muted-foreground">입학설명회 좌석 안내</p>
           {activeSession && (
             <p className="text-sm text-muted-foreground mt-2">
-              {activeSession.name}
-              {activeSession.event_date && ` (${new Date(activeSession.event_date).toLocaleDateString("ko-KR")})`}
+              {activeSession.session_number}회차
+              {activeSession.event_date && ` (${new Date(activeSession.event_date).toLocaleDateString("ko-KR")}`}
+              {activeSession.event_time && `. ${activeSession.event_time.substring(0, 5)}~`}
+              {activeSession.event_date && ')'}
             </p>
           )}
         </div>
