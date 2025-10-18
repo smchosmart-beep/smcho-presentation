@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { School, MapPin, Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 import { z } from "zod";
 import { SeatLayoutViewer } from "@/components/SeatLayoutViewer";
 import type { Session } from "@/types/session";
@@ -204,7 +204,6 @@ const Index = () => {
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <School className="w-10 h-10 text-primary" />
             <h1 className="text-3xl font-bold text-gradient-primary">
               상명초등학교
             </h1>
