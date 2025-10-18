@@ -277,21 +277,21 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
     <div className="space-y-6">
       {/* Stats */}
       <div className="flex gap-4">
-        <div className="bg-card p-4 rounded-lg border">
+        <div className="bg-card p-4 rounded-lg border text-center">
           <div className="text-sm text-muted-foreground">좌석 배치 현황</div>
           <div className="text-2xl font-bold">
             {assignedCount}/{totalSeats}
           </div>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
+        <div className="bg-card p-4 rounded-lg border text-center">
           <div className="text-sm text-muted-foreground">불참 가구 수</div>
           <div className="text-2xl font-bold">{unassignedAttendees.length}</div>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
+        <div className="bg-card p-4 rounded-lg border text-center">
           <div className="text-sm text-muted-foreground">현장등록 수</div>
           <div className="text-2xl font-bold">{onsiteCount}</div>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
+        <div className="bg-card p-4 rounded-lg border text-center">
           <div className="text-sm text-muted-foreground">사전 등록자 참가율</div>
           <div className="text-2xl font-bold">{attendanceRate}%</div>
           <div className="text-xs text-muted-foreground mt-1">
