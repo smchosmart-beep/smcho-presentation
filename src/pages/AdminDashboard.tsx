@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { School, LogOut, UserPlus, Edit, Trash2, Upload, AlertCircle, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +33,7 @@ type Attendee = {
   attendee_count: number;
   seat_number: string | null;
   created_at: string;
+  is_onsite_registration: boolean;
 };
 
 const AdminDashboard = () => {
@@ -991,7 +993,16 @@ const AdminDashboard = () => {
                   ) : (
                     attendees.map((attendee) => (
                       <TableRow key={attendee.id}>
-                        <TableCell className="font-medium">{attendee.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {attendee.name}
+                            {attendee.is_onsite_registration && (
+                              <Badge variant="secondary" className="text-xs">
+                                현장
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{attendee.phone}</TableCell>
                         <TableCell>{attendee.attendee_count}명</TableCell>
                         <TableCell>
