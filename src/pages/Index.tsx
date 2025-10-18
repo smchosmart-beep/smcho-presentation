@@ -30,6 +30,32 @@ const Index = () => {
     seat_number: string | null;
   } | null>(null);
 
+  const renderSeatNumbers = (seatNumberString: string) => {
+    const seats = seatNumberString.split(', ');
+    const pairs: string[][] = [];
+    
+    for (let i = 0; i < seats.length; i += 2) {
+      pairs.push(seats.slice(i, i + 2));
+    }
+    
+    return (
+      <div className="space-y-2 mb-4">
+        {pairs.map((pair, idx) => (
+          <div key={idx} className="flex gap-3 justify-center">
+            {pair.map((seat) => (
+              <span
+                key={seat}
+                className="text-3xl sm:text-4xl md:text-5xl font-bold text-gradient-primary px-3 py-2 border-2 border-primary/30 rounded-lg bg-primary/5"
+              >
+                [{seat}]
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   useEffect(() => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
@@ -208,9 +234,7 @@ const Index = () => {
                   <div className="space-y-4 animate-fade-in">
                     <div className="text-center p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg border-2 border-primary/20">
                       <p className="text-sm text-muted-foreground mb-2">배정된 좌석</p>
-                      <p className="text-5xl font-bold text-gradient-primary mb-4">
-                        {seatInfo.seat_number}
-                      </p>
+                      {renderSeatNumbers(seatInfo.seat_number)}
                       <div className="space-y-1 text-base">
                         <p className="text-foreground">
                           <span className="font-semibold">이름:</span> {seatInfo.name}
