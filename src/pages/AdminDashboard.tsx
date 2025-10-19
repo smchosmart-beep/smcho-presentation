@@ -786,9 +786,6 @@ const AdminDashboard = () => {
                 ? ((attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length / attendees.filter(a => !a.is_onsite_registration).length) * 100).toFixed(1)
                 : "0.0"}%
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {attendees.filter(a => !a.is_onsite_registration && a.seat_number !== null).length}/{attendees.filter(a => !a.is_onsite_registration).length} 가구
-            </div>
           </div>
           <div className="bg-card p-4 rounded-lg border text-center min-w-[140px]">
             <div className="text-sm text-muted-foreground">현장등록</div>
