@@ -699,7 +699,17 @@ const AdminDashboard = () => {
     
     families.forEach(family => {
       groups[currentGroup].push(...family);
-      currentGroup = (currentGroup + 1) % 10;
+      
+      // 현재 조의 총 인원 계산
+      const currentGroupTotal = groups[currentGroup].reduce(
+        (sum, att) => sum + att.attendee_count, 
+        0
+      );
+      
+      // 현재 조가 6명 이상이면 다음 조로 이동
+      if (currentGroupTotal >= 6 && currentGroup < 9) {
+        currentGroup++;
+      }
     });
     
     return groups;
