@@ -1586,34 +1586,34 @@ const AdminDashboard = () => {
               <DialogTitle className="text-3xl">학교 투어 조 편성 결과</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xl">조</TableHead>
-                    <TableHead className="text-xl">좌석 범위</TableHead>
-                    <TableHead className="text-xl text-center">인원</TableHead>
-                    <TableHead className="text-xl">학생명</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xl px-2 w-[80px]">조</TableHead>
+                  <TableHead className="text-xl px-2 w-[200px]">좌석 범위</TableHead>
+                  <TableHead className="text-xl text-center px-2 w-[100px]">인원</TableHead>
+                  <TableHead className="text-xl px-2">학생명</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tourGroupSummaries.map((group) => (
+                  <TableRow key={group.groupNumber} className="text-lg">
+                    <TableCell className="font-bold text-2xl px-2">
+                      {group.groupNumber}조
+                    </TableCell>
+                    <TableCell className="text-xl px-2">
+                      {group.startSeat} ~ {group.endSeat}
+                    </TableCell>
+                    <TableCell className="text-center text-xl px-2">
+                      {group.totalCount}명
+                    </TableCell>
+                    <TableCell className="text-base leading-relaxed px-2">
+                      {group.allNames}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tourGroupSummaries.map((group) => (
-                    <TableRow key={group.groupNumber} className="text-lg">
-                      <TableCell className="font-bold text-2xl">
-                        {group.groupNumber}조
-                      </TableCell>
-                      <TableCell className="text-xl">
-                        {group.startSeat} ~ {group.endSeat}
-                      </TableCell>
-                      <TableCell className="text-center text-xl">
-                        {group.totalCount}명
-                      </TableCell>
-                      <TableCell className="text-base leading-relaxed">
-                        {group.allNames}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                ))}
+              </TableBody>
+            </Table>
             </div>
           </DialogContent>
         </Dialog>
