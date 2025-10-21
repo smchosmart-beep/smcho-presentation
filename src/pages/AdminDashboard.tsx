@@ -724,21 +724,29 @@ const AdminDashboard = () => {
       const remainingAttendees = totalAttendees - assignedSoFar;
       const remainingGroups = 10 - currentGroup;
       const averageForRemaining = remainingAttendees / remainingGroups;
-      const dynamicMax = Math.ceil(averageForRemaining) + 1;
+      // 1~8조는 여유 +1, 9~10조는 정확히 평균으로 설정
+      const dynamicMax = currentGroup < 8 
+        ? Math.ceil(averageForRemaining) + 1
+        : Math.ceil(averageForRemaining);
       
       console.log(`[${currentGroup + 1}조] 남은 인원: ${remainingAttendees}명, 남은 조: ${remainingGroups}개, 동적 상한: ${dynamicMax}명`);
       
-      // 마지막 조(10조)가 아닐 때만 다음 조로 이동 고려
-      if (currentGroup < 9) {
-        // 현재 조에 가족을 추가하면 동적 상한(dynamicMax)을 초과하는 경우
-        if (currentGroupTotal + familyTotal > dynamicMax) {
-          // 현재 조가 최소 인원(targetMin)을 만족하면 다음 조로 이동
-          if (currentGroupTotal >= targetMin) {
+      // 가족을 추가하기 전에 범위 체크 (모든 조에 동일한 규칙 적용)
+      const wouldExceedMax = currentGroupTotal + familyTotal > dynamicMax;
+      const meetsMin = currentGroupTotal >= targetMin;
+
+      if (wouldExceedMax) {
+        if (currentGroup < 9) {
+          // 1~9조: 최소 인원 만족하면 다음 조로 이동
+          if (meetsMin) {
             console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명, 동적상한 ${dynamicMax}명) → 다음 조로 이동`);
             currentGroup++;
           } else {
             console.log(`${currentGroup + 1}조 최소 인원 미달 (${currentGroupTotal}명 < ${targetMin}명), 가족 강제 추가`);
           }
+        } else {
+          // 10조: targetMax 초과 경고 (하지만 가족은 분리 불가하므로 추가는 진행)
+          console.warn(`⚠️ 10조가 허용 범위 초과 예정 (${currentGroupTotal}명 + ${familyTotal}명 = ${currentGroupTotal + familyTotal}명 > ${dynamicMax}명)`);
         }
       }
       
