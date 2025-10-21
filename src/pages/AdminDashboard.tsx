@@ -716,16 +716,29 @@ const AdminDashboard = () => {
         0
       );
       
+      // 남은 인원과 남은 조 계산
+      const assignedSoFar = groups
+        .slice(0, currentGroup)
+        .reduce((sum, group) => sum + group.reduce((s, att) => s + att.attendee_count, 0), 0)
+        + currentGroupTotal;
+      const remainingAttendees = totalAttendees - assignedSoFar;
+      const remainingGroups = 10 - currentGroup;
+      const averageForRemaining = remainingAttendees / remainingGroups;
+      const dynamicMax = Math.ceil(averageForRemaining) + 1;
+      
+      console.log(`[${currentGroup + 1}조] 남은 인원: ${remainingAttendees}명, 남은 조: ${remainingGroups}개, 동적 상한: ${dynamicMax}명`);
+      
       // 마지막 조(10조)가 아닐 때만 다음 조로 이동 고려
       if (currentGroup < 9) {
-        // 현재 조에 가족을 추가하면 targetMax를 초과하는 경우
-        if (currentGroupTotal + familyTotal > targetMax) {
+        // 현재 조에 가족을 추가하면 동적 상한(dynamicMax)을 초과하는 경우
+        if (currentGroupTotal + familyTotal > dynamicMax) {
           // 현재 조가 최소 인원(targetMin)을 만족하면 다음 조로 이동
           if (currentGroupTotal >= targetMin) {
-            console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명) → 다음 조로 이동`);
+            console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명, 동적상한 ${dynamicMax}명) → 다음 조로 이동`);
             currentGroup++;
+          } else {
+            console.log(`${currentGroup + 1}조 최소 인원 미달 (${currentGroupTotal}명 < ${targetMin}명), 가족 강제 추가`);
           }
-          // currentGroupTotal < targetMin이면 강제로 현재 조에 추가 (최소 인원 보장)
         }
       }
       
@@ -735,40 +748,6 @@ const AdminDashboard = () => {
       console.log(`가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조 (배치 후: ${newTotal}명)`);
     });
     
-    // 10조 검증 및 재조정
-    let group10Total = groups[9].reduce((sum, att) => sum + att.attendee_count, 0);
-    
-    if (group10Total < targetMin && groups[9].length > 0) {
-      console.warn(`⚠️ 10조 인원 부족 (${group10Total}명 < ${targetMin}명)`);
-      console.log(`9조에서 가족을 10조로 이동 시도...`);
-      
-      // 9조의 가족들을 역순으로 확인하여 10조로 이동
-      let moved = false;
-      for (let i = groups[8].length - 1; i >= 0; i--) {
-        const familyToMove = groups[8][i];
-        const familyTotal = familyToMove.attendee_count;
-        const group9Total = groups[8].reduce((sum, att) => sum + att.attendee_count, 0);
-        
-        // 9조에서 빼도 9조가 targetMin 이상 유지되는지 확인
-        if (group9Total - familyTotal >= targetMin) {
-          // 9조에서 제거하고 10조로 이동
-          const movedFamily = groups[8].splice(i, 1);
-          groups[9].push(movedFamily[0]);
-          group10Total += familyTotal;
-          console.log(`가족 이동 (${familyTotal}명): 9조 → 10조 (10조 현재: ${group10Total}명)`);
-          moved = true;
-          
-          // 10조가 targetMin 이상이 되면 중단
-          if (group10Total >= targetMin) {
-            break;
-          }
-        }
-      }
-      
-      if (!moved) {
-        console.warn(`⚠️ 9조에서 이동 가능한 가족이 없습니다`);
-      }
-    }
     
     // 최종 결과 로깅
     const groupTotals = groups.map((group, idx) => {
