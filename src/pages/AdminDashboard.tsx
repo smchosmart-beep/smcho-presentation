@@ -694,6 +694,15 @@ const AdminDashboard = () => {
   };
 
   const distributeTo10Groups = (families: Attendee[][]) => {
+    // 전체 참석자의 총 인원 계산
+    const totalAttendees = families.reduce(
+      (sum, family) => sum + family.reduce((fSum, att) => fSum + att.attendee_count, 0),
+      0
+    );
+    
+    // 10개 조로 균등 분배 시 조당 목표 인원
+    const targetPerGroup = Math.ceil(totalAttendees / 10);
+    
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
     
@@ -706,8 +715,8 @@ const AdminDashboard = () => {
         0
       );
       
-      // 현재 조가 6명 이상이면 다음 조로 이동
-      if (currentGroupTotal >= 6 && currentGroup < 9) {
+      // 현재 조가 목표 인원에 도달하면 다음 조로 이동
+      if (currentGroupTotal >= targetPerGroup && currentGroup < 9) {
         currentGroup++;
       }
     });
