@@ -34,6 +34,13 @@ const Index = () => {
   } | null>(null);
   const [isOnSiteRegistrationOpen, setIsOnSiteRegistrationOpen] = useState(false);
   const [onSiteFormData, setOnSiteFormData] = useState({ name: "", phone: "" });
+  const [isAdminCodeDialogOpen, setIsAdminCodeDialogOpen] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [pendingRegistration, setPendingRegistration] = useState<{
+    phone: string;
+    name: string;
+    attendee_count: number;
+  } | null>(null);
 
   const renderSeatNumbers = (seatNumberString: string) => {
     const seats = seatNumberString.split(', ');
@@ -103,7 +110,13 @@ const Index = () => {
       const validated = registrationSchema.parse({ phone, name, attendee_count: count });
       
       if (validated.attendee_count > maxAttendeeCount) {
-        toast.error(`참석 인원은 최대 ${maxAttendeeCount}명까지 가능합니다`);
+        // 관리코드 입력 다이얼로그 표시
+        setPendingRegistration({
+          phone: validated.phone,
+          name: validated.name,
+          attendee_count: validated.attendee_count
+        });
+        setIsAdminCodeDialogOpen(true);
         return;
       }
 
@@ -156,6 +169,70 @@ const Index = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (adminCode !== "smcho") {
+      toast.error("잘못된 관리코드입니다");
+      setAdminCode("");
+      return;
+    }
+    
+    if (!pendingRegistration || !activeSession) {
+      return;
+    }
+    
+    // 관리코드가 올바르면 좌석 배정 진행
+    setLoading(true);
+    setIsAdminCodeDialogOpen(false);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('assign-seat', {
+        body: {
+          phone: pendingRegistration.phone,
+          name: pendingRegistration.name,
+          attendee_count: pendingRegistration.attendee_count,
+          session_id: activeSession.id,
+        },
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+      }
+      
+      if (data?.already_assigned && data?.data) {
+        setSeatInfo(data.data);
+        toast.info("이미 배정된 좌석입니다");
+        return;
+      }
+      
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      
+      if (!data?.success || !data?.data) {
+        toast.error("좌석 배정 중 오류가 발생했습니다");
+        return;
+      }
+      
+      if (data.success && data.data) {
+        setSeatInfo(data.data);
+        toast.success("좌석이 배정되었습니다!");
+        setPhone("");
+        setName("");
+        setAttendeeCount("");
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error("좌석 등록 중 오류가 발생했습니다");
+    } finally {
+      setLoading(false);
+      setAdminCode("");
+      setPendingRegistration(null);
     }
   };
 
@@ -358,6 +435,59 @@ const Index = () => {
                 <Button type="submit" className="w-full h-12 text-base btn-primary">
                   등록
                 </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* 관리코드 입력 다이얼로그 */}
+          <Dialog open={isAdminCodeDialogOpen} onOpenChange={(open) => {
+            setIsAdminCodeDialogOpen(open);
+            if (!open) {
+              setAdminCode("");
+              setPendingRegistration(null);
+            }
+          }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>관리코드 입력</DialogTitle>
+                <DialogDescription>
+                  최대 참석 인원({maxAttendeeCount}명)을 초과했습니다.
+                  {pendingRegistration && ` (입력 인원: ${pendingRegistration.attendee_count}명)`}
+                  <br />
+                  관리코드를 입력하면 초과 인원을 등록할 수 있습니다.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAdminCodeSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-code">관리코드</Label>
+                  <Input
+                    id="admin-code"
+                    type="password"
+                    className="text-base h-12"
+                    placeholder="관리코드를 입력하세요"
+                    value={adminCode}
+                    onChange={(e) => setAdminCode(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="flex-1 h-12"
+                    onClick={() => {
+                      setIsAdminCodeDialogOpen(false);
+                      setAdminCode("");
+                      setPendingRegistration(null);
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button type="submit" className="flex-1 h-12 btn-primary">
+                    확인
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
