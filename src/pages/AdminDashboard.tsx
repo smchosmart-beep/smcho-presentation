@@ -18,6 +18,7 @@ import type { Session } from "@supabase/supabase-js";
 import { SeatLayoutEditor } from "@/components/SeatLayoutEditor";
 import { SessionManagement } from "@/components/SessionManagement";
 import type { Session as AppSession } from "@/types/session";
+import type { TourGroupSummary } from "@/types/tourGroup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 
@@ -84,6 +85,9 @@ const AdminDashboard = () => {
     isProcessing: false
   });
 
+  // Tour group states
+  const [tourGroupSummaries, setTourGroupSummaries] = useState<TourGroupSummary[]>([]);
+
   useEffect(() => {
     checkAuth();
     fetchSessions();
@@ -105,6 +109,7 @@ const AdminDashboard = () => {
     if (currentSession) {
       fetchAttendees();
       fetchLayouts();
+      fetchTourGroups();
     }
   }, [currentSession]);
 
@@ -672,6 +677,159 @@ const AdminDashboard = () => {
     }
   };
 
+  // Tour group functions
+  const groupByFamily = (attendees: Attendee[]) => {
+    const families = new Map<string, Attendee[]>();
+    
+    attendees.forEach(att => {
+      const key = `${att.name}_${att.phone}`;
+      if (!families.has(key)) {
+        families.set(key, []);
+      }
+      families.get(key)!.push(att);
+    });
+    
+    return Array.from(families.values());
+  };
+
+  const distributeTo10Groups = (families: Attendee[][]) => {
+    const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
+    let currentGroup = 0;
+    
+    families.forEach(family => {
+      groups[currentGroup].push(...family);
+      currentGroup = (currentGroup + 1) % 10;
+    });
+    
+    return groups;
+  };
+
+  const handleAssignTourGroups = async () => {
+    if (!currentSession) {
+      toast.error("회차를 먼저 선택해주세요");
+      return;
+    }
+    
+    const { data: assignedAttendees, error } = await supabase
+      .from("attendees")
+      .select("*")
+      .eq("session_id", currentSession.id)
+      .not("seat_number", "is", null)
+      .order("seat_number");
+    
+    if (error) {
+      toast.error("참석자 정보를 불러오는데 실패했습니다");
+      return;
+    }
+
+    if (!assignedAttendees || assignedAttendees.length === 0) {
+      toast.error("좌석이 배정된 참석자가 없습니다");
+      return;
+    }
+    
+    const familyGroups = groupByFamily(assignedAttendees);
+    const tourGroups = distributeTo10Groups(familyGroups);
+    
+    // Delete existing tour groups for this session
+    await supabase
+      .from("tour_groups")
+      .delete()
+      .eq("session_id", currentSession.id);
+    
+    // Insert new tour groups
+    const insertData = tourGroups.flatMap((group, index) =>
+      group.map(attendee => ({
+        session_id: currentSession.id,
+        group_number: index + 1,
+        attendee_id: attendee.id
+      }))
+    );
+    
+    const { error: insertError } = await supabase
+      .from("tour_groups")
+      .insert(insertData);
+    
+    if (insertError) {
+      toast.error("조 편성 중 오류가 발생했습니다");
+      console.error("Tour group assignment error:", insertError);
+      return;
+    }
+    
+    toast.success("조 편성이 완료되었습니다");
+    fetchTourGroups();
+  };
+
+  const fetchTourGroups = async () => {
+    if (!currentSession) return;
+    
+    const { data, error } = await supabase
+      .from("tour_groups")
+      .select(`
+        group_number,
+        attendees!inner (
+          id,
+          name,
+          seat_number,
+          attendee_count
+        )
+      `)
+      .eq("session_id", currentSession.id)
+      .order("group_number");
+    
+    if (error) {
+      console.error("Failed to fetch tour groups:", error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      setTourGroupSummaries([]);
+      return;
+    }
+    
+    const groupMap = new Map<number, any[]>();
+    data.forEach((item: any) => {
+      if (!groupMap.has(item.group_number)) {
+        groupMap.set(item.group_number, []);
+      }
+      groupMap.get(item.group_number)!.push(item.attendees);
+    });
+    
+    const summaries: TourGroupSummary[] = Array.from(groupMap.entries()).map(([groupNumber, attendees]) => {
+      const sortedAttendees = attendees.sort((a, b) => 
+        a.seat_number.localeCompare(b.seat_number)
+      );
+      
+      return {
+        groupNumber,
+        startSeat: sortedAttendees[0].seat_number,
+        endSeat: sortedAttendees[sortedAttendees.length - 1].seat_number,
+        totalCount: attendees.reduce((sum, att) => sum + att.attendee_count, 0),
+        allNames: sortedAttendees.map(att => att.name).join(', ')
+      };
+    });
+    
+    setTourGroupSummaries(summaries);
+  };
+
+  const handleClearTourGroups = async () => {
+    if (!currentSession) return;
+    
+    if (!confirm("정말 조 편성을 초기화하시겠습니까?")) return;
+    
+    const { error } = await supabase
+      .from("tour_groups")
+      .delete()
+      .eq("session_id", currentSession.id);
+    
+    if (error) {
+      toast.error("초기화 중 오류가 발생했습니다");
+      return;
+    }
+    
+    setTourGroupSummaries([]);
+    toast.success("조 편성이 초기화되었습니다");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -795,12 +953,13 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Tabs: Attendees List, Seat Layout, Sessions & Settings */}
+        {/* Tabs: Attendees List, Seat Layout, Sessions, Tour Groups & Settings */}
         <Tabs defaultValue="attendees" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4 mb-6">
+          <TabsList className="grid w-full max-w-4xl grid-cols-5 mb-6">
             <TabsTrigger value="attendees">참석자 목록</TabsTrigger>
             <TabsTrigger value="seats">좌석 배치</TabsTrigger>
             <TabsTrigger value="sessions">회차 관리</TabsTrigger>
+            <TabsTrigger value="tour">투어 조 편성</TabsTrigger>
             <TabsTrigger value="settings">설정</TabsTrigger>
           </TabsList>
 
@@ -1112,6 +1271,82 @@ const AdminDashboard = () => {
                   onDelete={handleDeleteSession}
                   onEdit={handleEditSession}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tour">
+            <Card className="card-elevated">
+              <CardHeader>
+                <CardTitle>학교 투어 조 편성</CardTitle>
+                <CardDescription>
+                  좌석이 배정된 참석자를 10개 조로 자동 편성합니다. 가족(동일 이름+전화번호)은 같은 조에 배정됩니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button onClick={handleAssignTourGroups} className="btn-primary">
+                    조편성하기
+                  </Button>
+                  {tourGroupSummaries.length > 0 && (
+                    <Button variant="outline" onClick={handleClearTourGroups}>
+                      초기화
+                    </Button>
+                  )}
+                </div>
+                
+                {tourGroupSummaries.length > 0 && (
+                  <>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">편성 통계</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-2 text-sm">
+                        <div>총 참석자: {tourGroupSummaries.reduce((sum, g) => sum + g.totalCount, 0)}명</div>
+                        <div>조 개수: 10개</div>
+                        <div>평균 인원: {Math.round(tourGroupSummaries.reduce((sum, g) => sum + g.totalCount, 0) / 10)}명/조</div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">조 편성 결과</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[80px]">조</TableHead>
+                                <TableHead className="w-[180px]">좌석 범위</TableHead>
+                                <TableHead className="w-[80px] text-center">인원</TableHead>
+                                <TableHead className="min-w-[400px]">학생명</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {tourGroupSummaries.map((group) => (
+                                <TableRow key={group.groupNumber}>
+                                  <TableCell className="font-medium">
+                                    <Badge variant="secondary">{group.groupNumber}조</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {group.startSeat} ~ {group.endSeat}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {group.totalCount}명
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {group.allNames}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

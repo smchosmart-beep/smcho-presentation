@@ -180,6 +180,45 @@ export type Database = {
         }
         Relationships: []
       }
+      tour_groups: {
+        Row: {
+          attendee_id: string
+          created_at: string | null
+          group_number: number
+          id: string
+          session_id: string
+        }
+        Insert: {
+          attendee_id: string
+          created_at?: string | null
+          group_number: number
+          id?: string
+          session_id: string
+        }
+        Update: {
+          attendee_id?: string
+          created_at?: string | null
+          group_number?: number
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_groups_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_groups_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
