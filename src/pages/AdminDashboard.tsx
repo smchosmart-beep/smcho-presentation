@@ -694,31 +694,29 @@ const AdminDashboard = () => {
   };
 
   const distributeTo10Groups = (families: Attendee[][]) => {
-    // 전체 참석자의 총 인원 계산
     const totalAttendees = families.reduce(
       (sum, family) => sum + family.reduce((fSum, att) => fSum + att.attendee_count, 0),
       0
     );
     
-    // 10개 조로 균등 분배 시 조당 목표 인원
-    const targetPerGroup = Math.ceil(totalAttendees / 10);
-    
+    const averagePerGroup = totalAttendees / 10;
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
     
     families.forEach(family => {
-      groups[currentGroup].push(...family);
-      
-      // 현재 조의 총 인원 계산
+      const familyTotal = family.reduce((sum, att) => sum + att.attendee_count, 0);
       const currentGroupTotal = groups[currentGroup].reduce(
         (sum, att) => sum + att.attendee_count, 
         0
       );
       
-      // 현재 조가 목표 인원에 도달하면 다음 조로 이동
-      if (currentGroupTotal >= targetPerGroup && currentGroup < 9) {
+      // 현재 조에 가족을 추가했을 때 평균의 110%를 초과하면 다음 조로 이동
+      if (currentGroup < 9 && currentGroupTotal > 0 && 
+          currentGroupTotal + familyTotal > averagePerGroup * 1.1) {
         currentGroup++;
       }
+      
+      groups[currentGroup].push(...family);
     });
     
     return groups;
