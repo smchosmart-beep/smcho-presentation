@@ -710,9 +710,9 @@ const AdminDashboard = () => {
         0
       );
       
-      // 현재 조에 가족을 추가했을 때 평균의 110%를 초과하면 다음 조로 이동
+      // 현재 조에 가족을 추가했을 때 평균의 90%를 초과하면 다음 조로 이동
       if (currentGroup < 9 && currentGroupTotal > 0 && 
-          currentGroupTotal + familyTotal > averagePerGroup * 1.1) {
+          currentGroupTotal + familyTotal > averagePerGroup * 0.9) {
         currentGroup++;
       }
       
