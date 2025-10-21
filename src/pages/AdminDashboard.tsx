@@ -700,6 +700,7 @@ const AdminDashboard = () => {
     );
     
     const averagePerGroup = totalAttendees / 10;
+    const cap = Math.ceil(averagePerGroup); // 평균의 올림값 (예: 18.4 → 19)
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
     
@@ -710,9 +711,9 @@ const AdminDashboard = () => {
         0
       );
       
-      // 현재 조에 가족을 추가했을 때 평균을 초과하면 다음 조로 이동
+      // 현재 조에 가족을 추가했을 때 평균의 올림값(cap)을 초과하면 다음 조로 이동
       if (currentGroup < 9 && currentGroupTotal > 0 && 
-          currentGroupTotal + familyTotal > averagePerGroup) {
+          currentGroupTotal + familyTotal > cap) {
         currentGroup++;
       }
       
