@@ -706,58 +706,83 @@ const AdminDashboard = () => {
     console.log(`총 인원: ${totalAttendees}명`);
     console.log(`조당 기준: ${basePerGroup}명, 허용 범위: ${targetMin}~${targetMax}명`);
     
+    // Per-group quotas and cumulative quotas to guide balanced distribution
+    const remainder = totalAttendees % 10;
+    const quotas = Array.from({ length: 10 }, (_, i) => basePerGroup + (i < remainder ? 1 : 0));
+    const cumQuotas: number[] = [];
+    let acc = 0;
+    for (let i = 0; i < 10; i++) {
+      acc += quotas[i];
+      cumQuotas.push(acc);
+    }
+    console.log("조별 목표치:", quotas.join(", "));
+    console.log("누적 목표치:", cumQuotas.join(", "));
+
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
-    
+
     families.forEach((family, familyIndex) => {
       const familyTotal = family.reduce((sum, att) => sum + att.attendee_count, 0);
+
+      // Current group totals
+      const assignedBeforeCurrent = groups
+        .slice(0, currentGroup)
+        .reduce(
+          (sum, g) => sum + g.reduce((s, a) => s + a.attendee_count, 0),
+          0
+        );
       const currentGroupTotal = groups[currentGroup].reduce(
-        (sum, attendee) => sum + attendee.attendee_count,
+        (sum, a) => sum + a.attendee_count,
         0
       );
-      
-      // 남은 인원과 남은 조 계산
-      const assignedSoFar = groups
-        .slice(0, currentGroup)
-        .reduce((sum, group) => sum + group.reduce((s, att) => s + att.attendee_count, 0), 0)
-        + currentGroupTotal;
-      const remainingAttendees = totalAttendees - assignedSoFar;
-      const remainingGroups = 10 - currentGroup;
-      const averageForRemaining = remainingAttendees / remainingGroups;
-      // 1~8조는 여유 +1, 9~10조는 정확히 평균으로 설정
-      const dynamicMax = currentGroup < 8 
-        ? Math.ceil(averageForRemaining) + 1
-        : Math.ceil(averageForRemaining);
-      
-      console.log(`[${currentGroup + 1}조] 남은 인원: ${remainingAttendees}명, 남은 조: ${remainingGroups}개, 동적 상한: ${dynamicMax}명`);
-      
-      // 가족을 추가하기 전에 범위 체크 (모든 조에 동일한 규칙 적용)
-      const wouldExceedMax = currentGroupTotal + familyTotal > dynamicMax;
-      const meetsMin = currentGroupTotal >= targetMin;
+      const cumTargetForCurrent = cumQuotas[currentGroup];
 
-      if (wouldExceedMax) {
-        if (currentGroup < 9) {
-          // 1~9조: 최소 인원 만족하면 다음 조로 이동
-          if (meetsMin) {
-            console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명, 동적상한 ${dynamicMax}명) → 다음 조로 이동`);
-            currentGroup++;
-          } else {
-            console.log(`${currentGroup + 1}조 최소 인원 미달 (${currentGroupTotal}명 < ${targetMin}명), 가족 강제 추가`);
-          }
-        } else {
-          // 10조: targetMax 초과 경고 (하지만 가족은 분리 불가하므로 추가는 진행)
-          console.warn(`⚠️ 10조가 허용 범위 초과 예정 (${currentGroupTotal}명 + ${familyTotal}명 = ${currentGroupTotal + familyTotal}명 > ${dynamicMax}명)`);
-        }
+      // Predict cumulative if we add this family to the current group
+      const wouldAssigned = assignedBeforeCurrent + currentGroupTotal + familyTotal;
+
+      const belowMin = currentGroupTotal < targetMin;
+      // 1~8조(인덱스 0~7)는 +1 초과 허용, 9~10조(인덱스 8~9)는 초과 허용 0
+      const overshootAllowance = currentGroup <= 7 ? 1 : 0;
+      const wouldExceedCum = wouldAssigned > (cumTargetForCurrent + overshootAllowance);
+      const wouldExceedHardMax = currentGroupTotal + familyTotal > targetMax;
+
+      // Move to next group when: not 10th, current meets min, and we'd overshoot cum target or hard max
+      if (currentGroup < 9 && !belowMin && (wouldExceedCum || wouldExceedHardMax)) {
+        console.log(
+          `${currentGroup + 1}조 완료 (${currentGroupTotal}명) → 누적목표 ${cumTargetForCurrent} 대비 충분, 다음 조로 이동`
+        );
+        currentGroup++;
       }
-      
-      // 현재 조에 가족 배치
+
+      // Place family in current group
       groups[currentGroup].push(...family);
-      const newTotal = currentGroupTotal + familyTotal;
-      console.log(`가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조 (배치 후: ${newTotal}명)`);
+
+      // After placement, re-evaluate and potentially advance
+      const newGroupTotal = groups[currentGroup].reduce((s, a) => s + a.attendee_count, 0);
+      const newlyAssignedBeforeCurrent = groups
+        .slice(0, currentGroup)
+        .reduce(
+          (sum, g) => sum + g.reduce((s, a) => s + a.attendee_count, 0),
+          0
+        );
+      const newlyCum = newlyAssignedBeforeCurrent + newGroupTotal;
+      const newCumTargetForCurrent = cumQuotas[currentGroup];
+
+      console.log(
+        `가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조 (배치 후: ${newGroupTotal}명, 누적: ${newlyCum}/${newCumTargetForCurrent})`
+      );
+
+      if (
+        currentGroup < 9 &&
+        newGroupTotal >= targetMin &&
+        newlyCum >= newCumTargetForCurrent
+      ) {
+        console.log(
+          `${currentGroup + 1}조 누적 목표 달성 (${newlyCum} ≥ ${newCumTargetForCurrent}) → 다음 조로 이동`
+        );
+        currentGroup++;
+      }
     });
-    
-    
-    // 최종 결과 로깅
     const groupTotals = groups.map((group, idx) => {
       const total = group.reduce((sum, att) => sum + att.attendee_count, 0);
       const familyCount = new Set(group.map(att => att.phone)).size;
