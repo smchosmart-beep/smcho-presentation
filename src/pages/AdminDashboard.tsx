@@ -700,25 +700,50 @@ const AdminDashboard = () => {
     );
     
     const averagePerGroup = totalAttendees / 10;
-    const cap = Math.ceil(averagePerGroup); // 평균의 올림값 (예: 18.4 → 19)
+    const targetMin = Math.floor(averagePerGroup) - 1; // 예: 19.2 → 18
+    const targetMax = Math.ceil(averagePerGroup) + 1;  // 예: 19.2 → 21
+    
+    console.log(`총 인원: ${totalAttendees}명, 평균: ${averagePerGroup.toFixed(1)}명/조`);
+    console.log(`목표 범위: ${targetMin}~${targetMax}명/조 (차이 3명 이하)`);
+    
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
     
-    families.forEach(family => {
+    families.forEach((family, familyIndex) => {
       const familyTotal = family.reduce((sum, att) => sum + att.attendee_count, 0);
       const currentGroupTotal = groups[currentGroup].reduce(
-        (sum, att) => sum + att.attendee_count, 
+        (sum, attendee) => sum + attendee.attendee_count,
         0
       );
       
-      // 현재 조에 가족을 추가했을 때 평균의 올림값(cap)을 초과하면 다음 조로 이동
-      if (currentGroup < 9 && currentGroupTotal > 0 && 
-          currentGroupTotal + familyTotal > cap) {
+      // 현재 조에 가족을 추가했을 때 targetMax를 초과하면 다음 조로 이동
+      // (마지막 조가 아니고, 현재 조가 비어있지 않을 때만)
+      if (currentGroup < 9 && 
+          currentGroupTotal > 0 && 
+          currentGroupTotal + familyTotal > targetMax) {
+        console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명) → ${currentGroup + 2}조로 이동`);
         currentGroup++;
       }
       
+      // 현재 조에 가족 배치
       groups[currentGroup].push(...family);
+      console.log(`가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조`);
     });
+    
+    // 최종 결과 로깅
+    const groupTotals = groups.map((group, idx) => {
+      const total = group.reduce((sum, att) => sum + att.attendee_count, 0);
+      console.log(`${idx + 1}조: ${total}명 (${group.length}가족)`);
+      return total;
+    });
+    
+    const maxGroup = Math.max(...groupTotals);
+    const minGroup = Math.min(...groupTotals);
+    console.log(`최대/최소 차이: ${maxGroup - minGroup}명`);
+    
+    if (maxGroup - minGroup > 3) {
+      console.warn(`⚠️ 최대/최소 차이가 3명을 초과합니다!`);
+    }
     
     return groups;
   };
