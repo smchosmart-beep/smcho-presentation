@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { School, LogOut, UserPlus, Edit, Trash2, Upload, AlertCircle, CheckCircle } from "lucide-react";
+import { School, LogOut, UserPlus, Edit, Trash2, Upload, AlertCircle, CheckCircle, Maximize2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +87,7 @@ const AdminDashboard = () => {
 
   // Tour group states
   const [tourGroupSummaries, setTourGroupSummaries] = useState<TourGroupSummary[]>([]);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -795,16 +796,31 @@ const AdminDashboard = () => {
     });
     
     const summaries: TourGroupSummary[] = Array.from(groupMap.entries()).map(([groupNumber, attendees]) => {
-      const sortedAttendees = attendees.sort((a, b) => 
-        a.seat_number.localeCompare(b.seat_number)
-      );
+      // Parse all seats from comma-separated seat_number strings
+      const allSeats: string[] = [];
+      attendees.forEach(att => {
+        if (att.seat_number) {
+          const seats = att.seat_number.split(',').map(s => s.trim()).filter(s => s);
+          allSeats.push(...seats);
+        }
+      });
+      
+      // Sort all seats
+      const sortedSeats = allSeats.sort((a, b) => a.localeCompare(b));
       
       return {
         groupNumber,
-        startSeat: sortedAttendees[0].seat_number,
-        endSeat: sortedAttendees[sortedAttendees.length - 1].seat_number,
+        startSeat: sortedSeats[0] || '',
+        endSeat: sortedSeats[sortedSeats.length - 1] || '',
         totalCount: attendees.reduce((sum, att) => sum + att.attendee_count, 0),
-        allNames: sortedAttendees.map(att => att.name).join(', ')
+        allNames: attendees
+          .sort((a, b) => {
+            const firstSeatA = a.seat_number?.split(',')[0]?.trim() || '';
+            const firstSeatB = b.seat_number?.split(',')[0]?.trim() || '';
+            return firstSeatA.localeCompare(firstSeatB);
+          })
+          .map(att => att.name)
+          .join(', ')
       };
     });
     
@@ -1289,9 +1305,19 @@ const AdminDashboard = () => {
                     조편성하기
                   </Button>
                   {tourGroupSummaries.length > 0 && (
-                    <Button variant="outline" onClick={handleClearTourGroups}>
-                      초기화
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={handleClearTourGroups}>
+                        초기화
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsFullscreenOpen(true)}
+                        className="gap-2"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                        전체화면으로 보기
+                      </Button>
+                    </>
                   )}
                 </div>
                 
@@ -1549,6 +1575,45 @@ const AdminDashboard = () => {
               <Button onClick={handleUpdateSession}>
                 저장
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Fullscreen Tour Groups Dialog */}
+        <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-3xl">학교 투어 조 편성 결과</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xl">조</TableHead>
+                    <TableHead className="text-xl">좌석 범위</TableHead>
+                    <TableHead className="text-xl text-center">인원</TableHead>
+                    <TableHead className="text-xl">학생명</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tourGroupSummaries.map((group) => (
+                    <TableRow key={group.groupNumber} className="text-lg">
+                      <TableCell className="font-bold text-2xl">
+                        {group.groupNumber}조
+                      </TableCell>
+                      <TableCell className="text-xl">
+                        {group.startSeat} ~ {group.endSeat}
+                      </TableCell>
+                      <TableCell className="text-center text-xl">
+                        {group.totalCount}명
+                      </TableCell>
+                      <TableCell className="text-base leading-relaxed">
+                        {group.allNames}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </DialogContent>
         </Dialog>
