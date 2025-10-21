@@ -1346,7 +1346,7 @@ const AdminDashboard = () => {
                                 <TableHead className="w-[80px]">조</TableHead>
                                 <TableHead className="w-[180px]">좌석 범위</TableHead>
                                 <TableHead className="w-[80px] text-center">인원</TableHead>
-                                <TableHead className="min-w-[400px]">학생명</TableHead>
+                                <TableHead className="min-w-[400px]">아동명</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1592,7 +1592,7 @@ const AdminDashboard = () => {
                   <TableHead className="text-xl px-2 w-[80px]">조</TableHead>
                   <TableHead className="text-xl px-1 w-[200px]">좌석 범위</TableHead>
                   <TableHead className="text-xl text-center px-1 w-[100px]">인원</TableHead>
-                  <TableHead className="text-xl px-2">학생명</TableHead>
+                  <TableHead className="text-xl px-2">아동명</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
