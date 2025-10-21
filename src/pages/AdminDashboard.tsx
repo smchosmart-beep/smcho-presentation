@@ -813,14 +813,14 @@ const AdminDashboard = () => {
         startSeat: sortedSeats[0] || '',
         endSeat: sortedSeats[sortedSeats.length - 1] || '',
         totalCount: attendees.reduce((sum, att) => sum + att.attendee_count, 0),
-        allNames: attendees
+        allNames: '[' + attendees
           .sort((a, b) => {
             const firstSeatA = a.seat_number?.split(',')[0]?.trim() || '';
             const firstSeatB = b.seat_number?.split(',')[0]?.trim() || '';
             return firstSeatA.localeCompare(firstSeatB);
           })
           .map(att => att.name)
-          .join(', ')
+          .join('] [') + ']'
       };
     });
     
@@ -1607,7 +1607,7 @@ const AdminDashboard = () => {
                     <TableCell className="text-center text-xl px-1">
                       {group.totalCount}명
                     </TableCell>
-                    <TableCell className="text-base leading-relaxed px-2">
+                    <TableCell className="text-xl leading-relaxed px-2">
                       {group.allNames}
                     </TableCell>
                   </TableRow>
