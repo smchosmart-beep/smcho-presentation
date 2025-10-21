@@ -699,12 +699,12 @@ const AdminDashboard = () => {
       0
     );
     
-    const averagePerGroup = totalAttendees / 10;
-    const targetMin = Math.floor(averagePerGroup) - 2; // 예: 19.2 → 17
-    const targetMax = Math.ceil(averagePerGroup) + 2;  // 예: 19.2 → 22
+    const basePerGroup = Math.floor(totalAttendees / 10); // 소수점 절삭: 192 ÷ 10 = 19
+    const targetMin = basePerGroup - 2; // 19 - 2 = 17명
+    const targetMax = basePerGroup + 2; // 19 + 2 = 21명
     
-    console.log(`총 인원: ${totalAttendees}명, 평균: ${averagePerGroup.toFixed(1)}명/조`);
-    console.log(`목표 범위: ${targetMin}~${targetMax}명/조 (차이 5명 이하)`);
+    console.log(`총 인원: ${totalAttendees}명`);
+    console.log(`조당 기준: ${basePerGroup}명, 허용 범위: ${targetMin}~${targetMax}명`);
     
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
@@ -716,33 +716,79 @@ const AdminDashboard = () => {
         0
       );
       
-      // 현재 조에 가족을 추가했을 때 targetMax를 초과하면 다음 조로 이동
-      // (마지막 조가 아니고, 현재 조가 비어있지 않을 때만)
-      if (currentGroup < 9 && 
-          currentGroupTotal > 0 && 
-          currentGroupTotal + familyTotal > targetMax) {
-        console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명) → ${currentGroup + 2}조로 이동`);
-        currentGroup++;
+      // 마지막 조(10조)가 아닐 때만 다음 조로 이동 고려
+      if (currentGroup < 9) {
+        // 현재 조에 가족을 추가하면 targetMax를 초과하는 경우
+        if (currentGroupTotal + familyTotal > targetMax) {
+          // 현재 조가 최소 인원(targetMin)을 만족하면 다음 조로 이동
+          if (currentGroupTotal >= targetMin) {
+            console.log(`${currentGroup + 1}조 완료 (${currentGroupTotal}명) → 다음 조로 이동`);
+            currentGroup++;
+          }
+          // currentGroupTotal < targetMin이면 강제로 현재 조에 추가 (최소 인원 보장)
+        }
       }
       
       // 현재 조에 가족 배치
       groups[currentGroup].push(...family);
-      console.log(`가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조`);
+      const newTotal = currentGroupTotal + familyTotal;
+      console.log(`가족 ${familyIndex + 1} (${familyTotal}명) → ${currentGroup + 1}조 (배치 후: ${newTotal}명)`);
     });
+    
+    // 10조 검증 및 재조정
+    let group10Total = groups[9].reduce((sum, att) => sum + att.attendee_count, 0);
+    
+    if (group10Total < targetMin && groups[9].length > 0) {
+      console.warn(`⚠️ 10조 인원 부족 (${group10Total}명 < ${targetMin}명)`);
+      console.log(`9조에서 가족을 10조로 이동 시도...`);
+      
+      // 9조의 가족들을 역순으로 확인하여 10조로 이동
+      let moved = false;
+      for (let i = groups[8].length - 1; i >= 0; i--) {
+        const familyToMove = groups[8][i];
+        const familyTotal = familyToMove.attendee_count;
+        const group9Total = groups[8].reduce((sum, att) => sum + att.attendee_count, 0);
+        
+        // 9조에서 빼도 9조가 targetMin 이상 유지되는지 확인
+        if (group9Total - familyTotal >= targetMin) {
+          // 9조에서 제거하고 10조로 이동
+          const movedFamily = groups[8].splice(i, 1);
+          groups[9].push(movedFamily[0]);
+          group10Total += familyTotal;
+          console.log(`가족 이동 (${familyTotal}명): 9조 → 10조 (10조 현재: ${group10Total}명)`);
+          moved = true;
+          
+          // 10조가 targetMin 이상이 되면 중단
+          if (group10Total >= targetMin) {
+            break;
+          }
+        }
+      }
+      
+      if (!moved) {
+        console.warn(`⚠️ 9조에서 이동 가능한 가족이 없습니다`);
+      }
+    }
     
     // 최종 결과 로깅
     const groupTotals = groups.map((group, idx) => {
       const total = group.reduce((sum, att) => sum + att.attendee_count, 0);
-      console.log(`${idx + 1}조: ${total}명 (${group.length}가족)`);
+      const familyCount = new Set(group.map(att => att.phone)).size;
+      const status = total >= targetMin && total <= targetMax ? '✓' : '✗';
+      console.log(`${idx + 1}조: ${total}명 (${familyCount}가족) ${status}`);
       return total;
     });
     
     const maxGroup = Math.max(...groupTotals);
     const minGroup = Math.min(...groupTotals);
-    console.log(`최대/최소 차이: ${maxGroup - minGroup}명`);
+    console.log(`최대: ${maxGroup}명, 최소: ${minGroup}명, 차이: ${maxGroup - minGroup}명`);
     
-    if (maxGroup - minGroup > 5) {
-      console.warn(`⚠️ 최대/최소 차이가 5명을 초과합니다!`);
+    // 모든 조가 범위 내인지 확인
+    const outOfRange = groupTotals.filter(t => t < targetMin || t > targetMax);
+    if (outOfRange.length > 0) {
+      console.error(`❌ 범위 벗어난 조: ${outOfRange.length}개`);
+    } else {
+      console.log(`✅ 모든 조가 ${targetMin}~${targetMax}명 범위 내`);
     }
     
     return groups;
