@@ -700,11 +700,11 @@ const AdminDashboard = () => {
     );
     
     const averagePerGroup = totalAttendees / 10;
-    const targetMin = Math.floor(averagePerGroup) - 1; // 예: 19.2 → 18
-    const targetMax = Math.ceil(averagePerGroup) + 1;  // 예: 19.2 → 21
+    const targetMin = Math.floor(averagePerGroup) - 2; // 예: 19.2 → 17
+    const targetMax = Math.ceil(averagePerGroup) + 2;  // 예: 19.2 → 22
     
     console.log(`총 인원: ${totalAttendees}명, 평균: ${averagePerGroup.toFixed(1)}명/조`);
-    console.log(`목표 범위: ${targetMin}~${targetMax}명/조 (차이 3명 이하)`);
+    console.log(`목표 범위: ${targetMin}~${targetMax}명/조 (차이 5명 이하)`);
     
     const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
     let currentGroup = 0;
@@ -741,8 +741,8 @@ const AdminDashboard = () => {
     const minGroup = Math.min(...groupTotals);
     console.log(`최대/최소 차이: ${maxGroup - minGroup}명`);
     
-    if (maxGroup - minGroup > 3) {
-      console.warn(`⚠️ 최대/최소 차이가 3명을 초과합니다!`);
+    if (maxGroup - minGroup > 5) {
+      console.warn(`⚠️ 최대/최소 차이가 5명을 초과합니다!`);
     }
     
     return groups;
