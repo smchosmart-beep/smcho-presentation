@@ -1590,8 +1590,8 @@ const AdminDashboard = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xl px-2 w-[80px]">조</TableHead>
-                  <TableHead className="text-xl px-2 w-[200px]">좌석 범위</TableHead>
-                  <TableHead className="text-xl text-center px-2 w-[100px]">인원</TableHead>
+                  <TableHead className="text-xl px-1 w-[200px]">좌석 범위</TableHead>
+                  <TableHead className="text-xl text-center px-1 w-[100px]">인원</TableHead>
                   <TableHead className="text-xl px-2">학생명</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1601,10 +1601,10 @@ const AdminDashboard = () => {
                     <TableCell className="font-bold text-2xl px-2">
                       {group.groupNumber}조
                     </TableCell>
-                    <TableCell className="text-xl px-2">
+                    <TableCell className="text-xl px-1">
                       {group.startSeat} ~ {group.endSeat}
                     </TableCell>
-                    <TableCell className="text-center text-xl px-2">
+                    <TableCell className="text-center text-xl px-1">
                       {group.totalCount}명
                     </TableCell>
                     <TableCell className="text-base leading-relaxed px-2">
