@@ -45,6 +45,7 @@ const AdminDashboard = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<Attendee | null>(null);
   const [maxAttendeeCount, setMaxAttendeeCount] = useState(5);
+  const [tourGroupCount, setTourGroupCount] = useState(10);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
   // Session management states
@@ -197,7 +198,7 @@ const AdminDashboard = () => {
   const fetchSettings = async () => {
     const { data, error } = await supabase
       .from("settings")
-      .select("max_attendee_count")
+      .select("max_attendee_count, tour_group_count")
       .single();
 
     if (error) {
@@ -207,6 +208,7 @@ const AdminDashboard = () => {
 
     if (data) {
       setMaxAttendeeCount(data.max_attendee_count);
+      setTourGroupCount(data.tour_group_count || 10);
     }
   };
 
@@ -232,6 +234,30 @@ const AdminDashboard = () => {
 
     setMaxAttendeeCount(newMax);
     toast.success("최대 참석 인원이 업데이트되었습니다");
+  };
+
+  const updateTourGroupCount = async (count: number) => {
+    setLoadingSettings(true);
+    const { data: settingsData } = await supabase
+      .from("settings")
+      .select("id")
+      .limit(1)
+      .single();
+
+    if (settingsData) {
+      const { error } = await supabase
+        .from("settings")
+        .update({ tour_group_count: count })
+        .eq("id", settingsData.id);
+
+      if (error) {
+        toast.error("조 편성 개수 업데이트 실패");
+      } else {
+        setTourGroupCount(count);
+        toast.success(`조 편성 개수가 ${count}개로 변경되었습니다`);
+      }
+    }
+    setLoadingSettings(false);
   };
 
   const handleLogout = async () => {
@@ -693,32 +719,32 @@ const AdminDashboard = () => {
     return Array.from(families.values());
   };
 
-  const distributeTo10Groups = (families: Attendee[][]) => {
+  const distributeToGroups = (families: Attendee[][], groupCount: number) => {
     const totalAttendees = families.reduce(
       (sum, family) => sum + family.reduce((fSum, att) => fSum + att.attendee_count, 0),
       0
     );
     
-    const basePerGroup = Math.floor(totalAttendees / 10); // 소수점 절삭: 192 ÷ 10 = 19
-    const targetMin = basePerGroup - 2; // 19 - 2 = 17명
-    const targetMax = basePerGroup + 2; // 19 + 2 = 21명
+    const basePerGroup = Math.floor(totalAttendees / groupCount);
+    const targetMin = basePerGroup - 2;
+    const targetMax = basePerGroup + 2;
     
     console.log(`총 인원: ${totalAttendees}명`);
     console.log(`조당 기준: ${basePerGroup}명, 허용 범위: ${targetMin}~${targetMax}명`);
     
     // Per-group quotas and cumulative quotas to guide balanced distribution
-    const remainder = totalAttendees % 10;
-    const quotas = Array.from({ length: 10 }, (_, i) => basePerGroup + (i < remainder ? 1 : 0));
+    const remainder = totalAttendees % groupCount;
+    const quotas = Array.from({ length: groupCount }, (_, i) => basePerGroup + (i < remainder ? 1 : 0));
     const cumQuotas: number[] = [];
     let acc = 0;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < groupCount; i++) {
       acc += quotas[i];
       cumQuotas.push(acc);
     }
     console.log("조별 목표치:", quotas.join(", "));
     console.log("누적 목표치:", cumQuotas.join(", "));
 
-    const groups: Attendee[][] = Array.from({ length: 10 }, () => []);
+    const groups: Attendee[][] = Array.from({ length: groupCount }, () => []);
     let currentGroup = 0;
 
     families.forEach((family, familyIndex) => {
@@ -741,13 +767,13 @@ const AdminDashboard = () => {
       const wouldAssigned = assignedBeforeCurrent + currentGroupTotal + familyTotal;
 
       const belowMin = currentGroupTotal < targetMin;
-      // 1~8조(인덱스 0~7)는 +1 초과 허용, 9~10조(인덱스 8~9)는 초과 허용 0
-      const overshootAllowance = currentGroup <= 7 ? 1 : 0;
+      // 1~(n-2)조는 +1 초과 허용, (n-1)~n조는 초과 허용 0
+      const overshootAllowance = currentGroup <= groupCount - 3 ? 1 : 0;
       const wouldExceedCum = wouldAssigned > (cumTargetForCurrent + overshootAllowance);
       const wouldExceedHardMax = currentGroupTotal + familyTotal > targetMax;
 
-      // Move to next group when: not 10th, current meets min, and we'd overshoot cum target or hard max
-      if (currentGroup < 9 && !belowMin && (wouldExceedCum || wouldExceedHardMax)) {
+      // Move to next group when: not last, current meets min, and we'd overshoot cum target or hard max
+      if (currentGroup < groupCount - 1 && !belowMin && (wouldExceedCum || wouldExceedHardMax)) {
         console.log(
           `${currentGroup + 1}조 완료 (${currentGroupTotal}명) → 누적목표 ${cumTargetForCurrent} 대비 충분, 다음 조로 이동`
         );
@@ -773,7 +799,7 @@ const AdminDashboard = () => {
       );
 
       if (
-        currentGroup < 9 &&
+        currentGroup < groupCount - 1 &&
         newGroupTotal >= targetMin &&
         newlyCum >= newCumTargetForCurrent
       ) {
@@ -830,7 +856,7 @@ const AdminDashboard = () => {
     }
     
     const familyGroups = groupByFamily(assignedAttendees);
-    const tourGroups = distributeTo10Groups(familyGroups);
+    const tourGroups = distributeToGroups(familyGroups, tourGroupCount);
     
     // Delete existing tour groups for this session
     await supabase
@@ -1397,13 +1423,13 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle>학교 투어 조 편성</CardTitle>
                 <CardDescription>
-                  좌석이 배정된 참석자를 10개 조로 자동 편성합니다. 가족(동일 이름+전화번호)은 같은 조에 배정됩니다.
+                  좌석이 배정된 참석자를 {tourGroupCount}개 조로 자동 편성합니다. 가족(동일 이름+전화번호)은 같은 조에 배정됩니다.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Button onClick={handleAssignTourGroups} className="btn-primary">
-                    조편성하기
+                    {tourGroupCount}개 조로 자동 편성
                   </Button>
                   {tourGroupSummaries.length > 0 && (
                     <>
@@ -1430,8 +1456,8 @@ const AdminDashboard = () => {
                       </CardHeader>
                       <CardContent className="grid gap-2 text-sm">
                         <div>총 참석자: {tourGroupSummaries.reduce((sum, g) => sum + g.totalCount, 0)}명</div>
-                        <div>조 개수: 10개</div>
-                        <div>평균 인원: {Math.round(tourGroupSummaries.reduce((sum, g) => sum + g.totalCount, 0) / 10)}명/조</div>
+                        <div>조 개수: {tourGroupCount}개</div>
+                        <div>평균 인원: {Math.round(tourGroupSummaries.reduce((sum, g) => sum + g.totalCount, 0) / tourGroupCount)}명/조</div>
                       </CardContent>
                     </Card>
                     
@@ -1479,40 +1505,77 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="settings">
-            <Card className="card-elevated max-w-2xl">
-              <CardHeader>
-                <CardTitle>참석 인원 설정</CardTitle>
-                <CardDescription>
-                  참석자가 신청할 수 있는 최대 인원을 설정하세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="max-attendee">최대 참석 인원</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="max-attendee"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={maxAttendeeCount}
-                      onChange={(e) => setMaxAttendeeCount(Number(e.target.value))}
-                      className="max-w-xs"
-                    />
-                    <Button
-                      onClick={() => updateMaxAttendeeCount(maxAttendeeCount)}
+            <div className="space-y-6">
+              <Card className="card-elevated max-w-2xl">
+                <CardHeader>
+                  <CardTitle>참석 인원 설정</CardTitle>
+                  <CardDescription>
+                    참석자가 신청할 수 있는 최대 인원을 설정하세요
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="max-attendee">최대 참석 인원</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="max-attendee"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={maxAttendeeCount}
+                        onChange={(e) => setMaxAttendeeCount(Number(e.target.value))}
+                        className="max-w-xs"
+                      />
+                      <Button
+                        onClick={() => updateMaxAttendeeCount(maxAttendeeCount)}
+                        disabled={loadingSettings}
+                        className="btn-primary"
+                      >
+                        {loadingSettings ? "저장 중..." : "저장"}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      현재 설정: 최대 {maxAttendeeCount}명까지 신청 가능
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="card-elevated max-w-2xl">
+                <CardHeader>
+                  <CardTitle>조 편성 개수 설정</CardTitle>
+                  <CardDescription>
+                    투어 조를 몇 개로 나눌지 설정합니다 (8~15개 권장)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="tourGroupCount" className="min-w-[120px]">
+                      조 편성 개수
+                    </Label>
+                    <Select
+                      value={tourGroupCount.toString()}
+                      onValueChange={(value) => updateTourGroupCount(parseInt(value))}
                       disabled={loadingSettings}
-                      className="btn-primary"
                     >
-                      {loadingSettings ? "저장 중..." : "저장"}
-                    </Button>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 8 }, (_, i) => i + 8).map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num}개 조
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    현재 설정: 최대 {maxAttendeeCount}명까지 신청 가능
+                    현재 설정: <strong>{tourGroupCount}개 조</strong>로 자동 분배됩니다
                   </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 

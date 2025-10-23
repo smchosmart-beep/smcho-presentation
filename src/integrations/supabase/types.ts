@@ -164,18 +164,21 @@ export type Database = {
           created_at: string
           id: string
           max_attendee_count: number
+          tour_group_count: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           max_attendee_count?: number
+          tour_group_count?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           max_attendee_count?: number
+          tour_group_count?: number
           updated_at?: string
         }
         Relationships: []
