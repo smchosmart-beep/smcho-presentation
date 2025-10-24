@@ -204,7 +204,10 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
       const seatNumberString = seatsToAssign.join(', ');
       const { error } = await supabase
         .from("attendees")
-        .update({ seat_number: seatNumberString })
+        .update({ 
+          seat_number: seatNumberString,
+          attendee_count: count
+        })
         .eq("id", attendeeId);
 
       if (error) throw error;

@@ -90,6 +90,12 @@ const AdminDashboard = () => {
   const [tourGroupSummaries, setTourGroupSummaries] = useState<TourGroupSummary[]>([]);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
+  // Sort state
+  const [sortConfig, setSortConfig] = useState<{
+    key: 'name' | 'seat_number' | 'attendee_count';
+    direction: 'asc' | 'desc';
+  }>({ key: 'name', direction: 'asc' });
+
   useEffect(() => {
     checkAuth();
     fetchSessions();
@@ -259,6 +265,35 @@ const AdminDashboard = () => {
     }
     setLoadingSettings(false);
   };
+
+  const handleSort = (key: 'name' | 'seat_number' | 'attendee_count') => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const sortedAttendees = [...attendees].sort((a, b) => {
+    const { key, direction } = sortConfig;
+    
+    let aValue: string | number = '';
+    let bValue: string | number = '';
+    
+    if (key === 'name') {
+      aValue = a.name;
+      bValue = b.name;
+    } else if (key === 'seat_number') {
+      aValue = a.seat_number || 'zzz';
+      bValue = b.seat_number || 'zzz';
+    } else if (key === 'attendee_count') {
+      aValue = a.attendee_count;
+      bValue = b.attendee_count;
+    }
+    
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -1312,22 +1347,52 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>아동명</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-1">
+                        아동명
+                        {sortConfig.key === 'name' && (
+                          <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead>전화번호</TableHead>
-                    <TableHead>참석 인원</TableHead>
-                    <TableHead>좌석 번호</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('attendee_count')}
+                    >
+                      <div className="flex items-center gap-1">
+                        참석 인원
+                        {sortConfig.key === 'attendee_count' && (
+                          <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('seat_number')}
+                    >
+                      <div className="flex items-center gap-1">
+                        좌석 번호
+                        {sortConfig.key === 'seat_number' && (
+                          <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendees.length === 0 ? (
+                  {sortedAttendees.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
                         등록된 참석자가 없습니다
                       </TableCell>
                     </TableRow>
                   ) : (
-                    attendees.map((attendee) => (
+                    sortedAttendees.map((attendee) => (
                       <TableRow key={attendee.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
