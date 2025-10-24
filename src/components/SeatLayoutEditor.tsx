@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { SeatRow } from "./SeatRow";
 import { Plus, Minus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +59,8 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<SeatLayout | null>(null);
+  const [selectedAttendeeId, setSelectedAttendeeId] = useState<string>("");
+  const [actualAttendeeCount, setActualAttendeeCount] = useState<number>(1);
   const [previewSeats, setPreviewSeats] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -100,17 +104,56 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   const handleSeatClick = (seatNumber: string, attendee?: Attendee) => {
     setSelectedSeat(seatNumber);
     setCurrentAttendee(attendee);
+    setSelectedAttendeeId("");
+    setActualAttendeeCount(1);
+    setPreviewSeats([]);
     setDialogOpen(true);
   };
 
-  const handleAssignSeat = async (attendeeId: string) => {
-    if (!selectedSeat) return;
+  const updatePreviewSeats = (count: number) => {
+    if (!selectedSeat || count < 1) {
+      setPreviewSeats([]);
+      return;
+    }
+
+    const assignedSeats = new Set<string>();
+    attendees.forEach(a => {
+      if (a.seat_number) {
+        a.seat_number.split(',').map(s => s.trim()).forEach(seat => {
+          assignedSeats.add(seat);
+        });
+      }
+    });
+
+    const [selectedRow, selectedSeatNum] = selectedSeat.split('-');
+    const startSeatNumber = parseInt(selectedSeatNum, 10);
+    
+    const preview: string[] = [];
+    let currentSeatNum = startSeatNumber;
+
+    for (let i = 0; i < count && currentSeatNum <= 20; i++) {
+      const seatId = `${selectedRow}-${String(currentSeatNum).padStart(2, '0')}`;
+      
+      if (assignedSeats.has(seatId)) {
+        setPreviewSeats([]);
+        return;
+      }
+      
+      preview.push(seatId);
+      currentSeatNum++;
+    }
+
+    setPreviewSeats(preview);
+  };
+
+  const handleAssignSeat = async (attendeeId: string, count: number) => {
+    if (!selectedSeat || !attendeeId || count < 1) return;
 
     try {
       const selectedAttendee = attendees.find(a => a.id === attendeeId);
       if (!selectedAttendee) return;
 
-      const requiredSeats = selectedAttendee.attendee_count;
+      const requiredSeats = count;
 
       // 1. 현재 배정된 모든 좌석 파악
       const assignedSeats = new Set<string>();
@@ -173,6 +216,8 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
 
       await fetchData();
       setDialogOpen(false);
+      setSelectedAttendeeId("");
+      setActualAttendeeCount(1);
       setPreviewSeats([]);
     } catch (error: any) {
       toast({
@@ -388,24 +433,62 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
               <p className="text-sm text-muted-foreground">
                 <strong>{selectedSeat}</strong> 좌석부터 시작하여 연속된 좌석을 배정합니다.
               </p>
-              <Select onValueChange={handleAssignSeat}>
-                <SelectTrigger>
-                  <SelectValue placeholder="참석자 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {unassignedAttendees.map((attendee) => (
-                    <SelectItem key={attendee.id} value={attendee.id}>
-                      {attendee.name} ({attendee.phone}) - {attendee.attendee_count}명
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* 1단계: 참석자 선택 */}
+              <div>
+                <Label>참석자 선택</Label>
+                <Select value={selectedAttendeeId} onValueChange={setSelectedAttendeeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="참석자 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unassignedAttendees.map((attendee) => (
+                      <SelectItem key={attendee.id} value={attendee.id}>
+                        {attendee.name} ({attendee.phone})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 2단계: 인원 수 입력 */}
+              {selectedAttendeeId && (
+                <div>
+                  <Label>실제 참석 인원 수</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={actualAttendeeCount}
+                    onChange={(e) => {
+                      const count = parseInt(e.target.value, 10) || 1;
+                      setActualAttendeeCount(count);
+                      updatePreviewSeats(count);
+                    }}
+                    placeholder="인원 수 입력"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    등록 인원: {attendees.find(a => a.id === selectedAttendeeId)?.attendee_count}명
+                  </p>
+                </div>
+              )}
+
+              {/* 3단계: 미리보기 */}
               {previewSeats.length > 0 && (
                 <div className="p-3 bg-muted rounded-md text-sm">
                   <p className="font-medium mb-1">배정될 좌석:</p>
                   <p className="text-muted-foreground">{previewSeats.join(', ')}</p>
                 </div>
               )}
+
+              {/* 4단계: 배정 버튼 */}
+              <Button 
+                onClick={() => handleAssignSeat(selectedAttendeeId, actualAttendeeCount)}
+                disabled={!selectedAttendeeId || actualAttendeeCount < 1 || previewSeats.length === 0}
+                className="w-full"
+              >
+                좌석 배정
+              </Button>
             </div>
           )}
         </DialogContent>
