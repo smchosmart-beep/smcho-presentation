@@ -57,6 +57,7 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<SeatLayout | null>(null);
+  const [previewSeats, setPreviewSeats] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,20 +107,73 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
     if (!selectedSeat) return;
 
     try {
+      const selectedAttendee = attendees.find(a => a.id === attendeeId);
+      if (!selectedAttendee) return;
+
+      const requiredSeats = selectedAttendee.attendee_count;
+
+      // 1. 현재 배정된 모든 좌석 파악
+      const assignedSeats = new Set<string>();
+      attendees.forEach(a => {
+        if (a.seat_number) {
+          a.seat_number.split(',').map(s => s.trim()).forEach(seat => {
+            assignedSeats.add(seat);
+          });
+        }
+      });
+
+      // 2. 선택한 좌석의 행과 번호 파싱
+      const [selectedRow, selectedSeatNum] = selectedSeat.split('-');
+      const startSeatNumber = parseInt(selectedSeatNum, 10);
+
+      // 3. 같은 행에서 연속된 빈 좌석 찾기
+      const seatsToAssign: string[] = [];
+      let currentSeatNum = startSeatNumber;
+
+      for (let i = 0; i < requiredSeats && currentSeatNum <= 20; i++) {
+        const seatId = `${selectedRow}-${String(currentSeatNum).padStart(2, '0')}`;
+        
+        if (assignedSeats.has(seatId)) {
+          // 이미 배정된 좌석이면 실패
+          toast({
+            title: "좌석 배정 실패",
+            description: `${seatId} 좌석이 이미 배정되어 있습니다. 연속된 빈 좌석이 부족합니다.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        seatsToAssign.push(seatId);
+        currentSeatNum++;
+      }
+
+      // 4. 필요한 좌석 수를 채우지 못한 경우
+      if (seatsToAssign.length < requiredSeats) {
+        toast({
+          title: "좌석 배정 실패",
+          description: `${selectedRow}행에 연속된 빈 좌석이 부족합니다 (필요: ${requiredSeats}석, 가능: ${seatsToAssign.length}석)`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 5. DB 업데이트
+      const seatNumberString = seatsToAssign.join(', ');
       const { error } = await supabase
         .from("attendees")
-        .update({ seat_number: selectedSeat })
+        .update({ seat_number: seatNumberString })
         .eq("id", attendeeId);
 
       if (error) throw error;
 
       toast({
         title: "좌석 배정 완료",
-        description: `${selectedSeat} 좌석이 배정되었습니다.`,
+        description: `${selectedAttendee.name}님 (${requiredSeats}명): ${seatNumberString}`,
       });
 
       await fetchData();
       setDialogOpen(false);
+      setPreviewSeats([]);
     } catch (error: any) {
       toast({
         title: "오류",
@@ -332,7 +386,7 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                <strong>{selectedSeat}</strong> 좌석에 배정할 참석자를 선택하세요.
+                <strong>{selectedSeat}</strong> 좌석부터 시작하여 연속된 좌석을 배정합니다.
               </p>
               <Select onValueChange={handleAssignSeat}>
                 <SelectTrigger>
@@ -346,6 +400,12 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
                   ))}
                 </SelectContent>
               </Select>
+              {previewSeats.length > 0 && (
+                <div className="p-3 bg-muted rounded-md text-sm">
+                  <p className="font-medium mb-1">배정될 좌석:</p>
+                  <p className="text-muted-foreground">{previewSeats.join(', ')}</p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
