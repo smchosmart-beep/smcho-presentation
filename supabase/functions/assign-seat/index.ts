@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     // Not in pre-registered list
     if (!existingAttendee) {
       return new Response(
-        JSON.stringify({ error: '사전등록 한 전화번호와 아동명을 정확히 입력해주세요.' }),
+        JSON.stringify({ error: '사전등록 정보와 일치하지 않습니다. 전화번호와 아동명을 확인해주세요.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

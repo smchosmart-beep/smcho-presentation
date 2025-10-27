@@ -162,13 +162,13 @@ const Index = () => {
 
       // 네트워크 에러 또는 예상치 못한 응답 구조
       if (error || !data) {
-        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
+        toast.error("사전등록 정보와 일치하지 않습니다. 전화번호와 아동명을 확인해주세요.");
         return;
       }
 
       // Edge Function 응답이 있지만 success가 false인 경우
       if (!data?.success || !data?.data) {
-        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
+        toast.error("사전등록 정보와 일치하지 않습니다. 전화번호와 아동명을 확인해주세요.");
         return;
       }
 
@@ -184,7 +184,7 @@ const Index = () => {
         toast.error(error.errors[0].message);
       } else {
         console.error('Registration error:', error);
-        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
+        toast.error("사전등록 정보와 일치하지 않습니다. 전화번호와 아동명을 확인해주세요.");
       }
     } finally {
       setLoading(false);
