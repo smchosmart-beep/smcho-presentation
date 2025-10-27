@@ -13,13 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -29,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AttendeeCombobox } from "./AttendeeCombobox";
 import type { Session } from "@/types/session";
 
 interface SeatLayout {
@@ -440,18 +434,11 @@ export const SeatLayoutEditor = ({ currentSession }: SeatLayoutEditorProps) => {
               {/* 1단계: 참석자 선택 */}
               <div>
                 <Label>참석자 선택</Label>
-                <Select value={selectedAttendeeId} onValueChange={setSelectedAttendeeId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="참석자 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unassignedAttendees.map((attendee) => (
-                      <SelectItem key={attendee.id} value={attendee.id}>
-                        {attendee.name} ({attendee.phone})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AttendeeCombobox
+                  attendees={unassignedAttendees}
+                  value={selectedAttendeeId}
+                  onValueChange={setSelectedAttendeeId}
+                />
               </div>
 
               {/* 2단계: 인원 수 입력 */}
