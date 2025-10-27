@@ -82,6 +82,69 @@ export type Database = {
         }
         Relationships: []
       }
+      seat_assignment_logs: {
+        Row: {
+          assigned_seats: string | null
+          attendee_id: string | null
+          attendee_name: string
+          attendee_phone: string
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          processing_time_ms: number | null
+          requested_seat_count: number
+          session_id: string
+          version_attempted: number | null
+          version_final: number | null
+        }
+        Insert: {
+          assigned_seats?: string | null
+          attendee_id?: string | null
+          attendee_name: string
+          attendee_phone: string
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          processing_time_ms?: number | null
+          requested_seat_count: number
+          session_id: string
+          version_attempted?: number | null
+          version_final?: number | null
+        }
+        Update: {
+          assigned_seats?: string | null
+          attendee_id?: string | null
+          attendee_name?: string
+          attendee_phone?: string
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          processing_time_ms?: number | null
+          requested_seat_count?: number
+          session_id?: string
+          version_attempted?: number | null
+          version_final?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_assignment_logs_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_assignment_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seat_layout: {
         Row: {
           created_at: string

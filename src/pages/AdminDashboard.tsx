@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { School, LogOut, UserPlus, Edit, Trash2, Upload, AlertCircle, CheckCircle, Maximize2 } from "lucide-react";
+import { AssignmentLogs } from "@/components/AssignmentLogs";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
@@ -1131,13 +1132,14 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Tabs: Attendees List, Seat Layout, Sessions, Tour Groups & Settings */}
+        {/* Tabs: Attendees List, Seat Layout, Sessions, Tour Groups, Assignment Logs & Settings */}
         <Tabs defaultValue="attendees" className="w-full">
-          <TabsList className="grid w-full max-w-4xl grid-cols-5 mb-6">
+          <TabsList className="grid w-full max-w-5xl grid-cols-6 mb-6">
             <TabsTrigger value="attendees">참석자 목록</TabsTrigger>
             <TabsTrigger value="seats">좌석 배치</TabsTrigger>
             <TabsTrigger value="sessions">회차 관리</TabsTrigger>
             <TabsTrigger value="tour">투어 조 편성</TabsTrigger>
+            <TabsTrigger value="logs">배정 로그</TabsTrigger>
             <TabsTrigger value="settings">설정</TabsTrigger>
           </TabsList>
 
@@ -1567,6 +1569,10 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <AssignmentLogs currentSession={currentSession} />
           </TabsContent>
 
           <TabsContent value="settings">

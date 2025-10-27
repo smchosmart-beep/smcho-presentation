@@ -12,7 +12,46 @@ interface RegistrationRequest {
   session_id: string;
 }
 
+// Helper function to log seat assignment events
+async function logAssignment(
+  supabase: any,
+  sessionId: string,
+  attendeeId: string | null,
+  attendeeName: string,
+  attendeePhone: string,
+  requestedSeatCount: number,
+  eventType: 'success' | 'conflict' | 'retry' | 'error',
+  assignedSeats?: string,
+  errorMessage?: string,
+  versionAttempted?: number,
+  versionFinal?: number,
+  startTime?: number
+) {
+  const processingTime = startTime ? Date.now() - startTime : null;
+  
+  try {
+    await supabase.from('seat_assignment_logs').insert({
+      session_id: sessionId,
+      attendee_id: attendeeId,
+      attendee_name: attendeeName,
+      attendee_phone: attendeePhone,
+      requested_seat_count: requestedSeatCount,
+      assigned_seats: assignedSeats,
+      event_type: eventType,
+      error_message: errorMessage,
+      version_attempted: versionAttempted,
+      version_final: versionFinal,
+      processing_time_ms: processingTime
+    });
+  } catch (logError) {
+    console.error('Failed to log assignment:', logError);
+    // Don't throw - logging failure shouldn't break the main flow
+  }
+}
+
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -62,6 +101,21 @@ Deno.serve(async (req) => {
 
     // Not in pre-registered list
     if (!existingAttendee) {
+      await logAssignment(
+        supabase,
+        session_id,
+        null,
+        name,
+        phone,
+        attendee_count,
+        'error',
+        undefined,
+        '사전등록 정보와 일치하지 않음',
+        undefined,
+        undefined,
+        startTime
+      );
+      
       return new Response(
         JSON.stringify({ error: '사전등록 정보와 일치하지 않습니다. 전화번호와 아동명을 확인해주세요.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -71,6 +125,22 @@ Deno.serve(async (req) => {
     // Already has seat assigned - return success with existing data
     if (existingAttendee.seat_number) {
       console.log('Seat already assigned, returning existing data');
+      
+      await logAssignment(
+        supabase,
+        session_id,
+        existingAttendee.id,
+        name,
+        phone,
+        attendee_count,
+        'retry',
+        existingAttendee.seat_number,
+        '이미 배정된 좌석 반환',
+        existingAttendee.version,
+        existingAttendee.version,
+        startTime
+      );
+      
       return new Response(
         JSON.stringify({ 
           success: true,
@@ -143,6 +213,21 @@ Deno.serve(async (req) => {
     console.log('Available seats:', availableSeats);
 
     if (availableSeats.length < attendee_count) {
+      await logAssignment(
+        supabase,
+        session_id,
+        existingAttendee.id,
+        name,
+        phone,
+        attendee_count,
+        'error',
+        undefined,
+        '사용 가능한 좌석 부족',
+        existingAttendee.version,
+        undefined,
+        startTime
+      );
+      
       return new Response(
         JSON.stringify({ error: '사용 가능한 좌석이 부족합니다' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -222,6 +307,21 @@ Deno.serve(async (req) => {
       
       // Version conflict - another user assigned seat first
       if (!updatedAttendee) {
+        await logAssignment(
+          supabase,
+          session_id,
+          existingAttendee.id,
+          name,
+          phone,
+          attendee_count,
+          'conflict',
+          selectedSeats.join(', '),
+          `버전 충돌 감지 (v${existingAttendee.version})`,
+          existingAttendee.version,
+          undefined,
+          startTime
+        );
+        
         return new Response(
           JSON.stringify({ 
             error: '좌석이 이미 다른 사용자에게 배정되었습니다. 다시 시도해주세요.',
@@ -238,6 +338,21 @@ Deno.serve(async (req) => {
     }
 
     console.log('Successfully assigned seat:', updatedAttendee);
+
+    await logAssignment(
+      supabase,
+      session_id,
+      updatedAttendee.id,
+      name,
+      phone,
+      attendee_count,
+      'success',
+      updatedAttendee.seat_number,
+      undefined,
+      existingAttendee.version,
+      updatedAttendee.version,
+      startTime
+    );
 
     return new Response(
       JSON.stringify({ 
