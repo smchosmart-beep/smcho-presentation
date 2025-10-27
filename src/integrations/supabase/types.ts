@@ -25,6 +25,7 @@ export type Database = {
           seat_number: string | null
           session_id: string
           updated_at: string
+          version: number | null
         }
         Insert: {
           attendee_count?: number
@@ -36,6 +37,7 @@ export type Database = {
           seat_number?: string | null
           session_id: string
           updated_at?: string
+          version?: number | null
         }
         Update: {
           attendee_count?: number
@@ -47,6 +49,7 @@ export type Database = {
           seat_number?: string | null
           session_id?: string
           updated_at?: string
+          version?: number | null
         }
         Relationships: [
           {

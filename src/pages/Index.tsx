@@ -41,6 +41,7 @@ const Index = () => {
     name: string;
     attendee_count: number;
   } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const renderSeatNumbers = (seatNumberString: string) => {
     const seats = seatNumberString.split(', ');
@@ -97,8 +98,10 @@ const Index = () => {
     fetchSettings();
   }, []);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent, retryCount = 0): Promise<void> => {
     e.preventDefault();
+    
+    if (isSubmitting) return;
     
     if (!activeSession) {
       toast.error("현재 진행 중인 입학설명회가 없습니다");
@@ -110,7 +113,6 @@ const Index = () => {
       const validated = registrationSchema.parse({ phone, name, attendee_count: count });
       
       if (validated.attendee_count > maxAttendeeCount) {
-        // 관리코드 입력 다이얼로그 표시
         setPendingRegistration({
           phone: validated.phone,
           name: validated.name,
@@ -120,6 +122,7 @@ const Index = () => {
         return;
       }
 
+      setIsSubmitting(true);
       setLoading(true);
 
       const { data, error } = await supabase.functions.invoke('assign-seat', {
@@ -135,14 +138,22 @@ const Index = () => {
         console.error('Edge function error:', error);
       }
 
-      // Check if seat is already assigned
+      // Handle conflict - retry up to 3 times
+      if (data?.conflict && retryCount < 3) {
+        console.log(`Retrying seat assignment (attempt ${retryCount + 1}/3)`);
+        setLoading(false);
+        setIsSubmitting(false);
+        
+        await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
+        return handleRegister(e, retryCount + 1);
+      }
+
       if (data?.already_assigned && data?.data) {
         setSeatInfo(data.data);
         toast.info("이미 배정된 좌석입니다");
         return;
       }
 
-      // Check for other error messages
       if (data?.error) {
         toast.error(data.error);
         return;
@@ -169,6 +180,7 @@ const Index = () => {
       }
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -365,7 +377,7 @@ const Index = () => {
                 <Button 
                   type="submit" 
                   className="w-full h-12 text-base btn-primary"
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                 >
                   {loading ? "신청 중..." : "좌석 확인"}
                 </Button>

@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // Check if attendee is in pre-registered list (phone + name + session match)
     const { data: existingAttendee, error: checkError } = await supabase
       .from('attendees')
-      .select('*')
+      .select('*, version')
       .eq('phone', phone)
       .eq('name', name)
       .eq('session_id', session_id)
@@ -203,20 +203,34 @@ Deno.serve(async (req) => {
 
     console.log('Selected seats:', selectedSeats);
 
-    // Update existing attendee with seat assignment
+    // Update existing attendee with seat assignment (Optimistic Locking)
     const seatNumberString = selectedSeats.join(', ');
     const { data: updatedAttendee, error: updateError } = await supabase
       .from('attendees')
       .update({
         attendee_count,
         seat_number: seatNumberString,
+        version: (existingAttendee.version || 0) + 1,
       })
       .eq('id', existingAttendee.id)
+      .eq('version', existingAttendee.version || 0)
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError || !updatedAttendee) {
-      console.error('Error updating attendee:', updateError);
+      console.error('Seat assignment conflict or error:', updateError);
+      
+      // Version conflict - another user assigned seat first
+      if (!updatedAttendee) {
+        return new Response(
+          JSON.stringify({ 
+            error: '좌석이 이미 다른 사용자에게 배정되었습니다. 다시 시도해주세요.',
+            conflict: true 
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: '좌석 배정 중 오류가 발생했습니다' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
