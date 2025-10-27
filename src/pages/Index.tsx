@@ -154,13 +154,21 @@ const Index = () => {
         return;
       }
 
+      // Edge Function이 명시적인 에러 메시지를 반환한 경우
       if (data?.error) {
         toast.error(data.error);
         return;
       }
 
+      // 네트워크 에러 또는 예상치 못한 응답 구조
+      if (error || !data) {
+        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
+        return;
+      }
+
+      // Edge Function 응답이 있지만 success가 false인 경우
       if (!data?.success || !data?.data) {
-        toast.error("좌석 배정 중 오류가 발생했습니다");
+        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
         return;
       }
 
@@ -176,7 +184,7 @@ const Index = () => {
         toast.error(error.errors[0].message);
       } else {
         console.error('Registration error:', error);
-        toast.error("좌석 등록 중 오류가 발생했습니다");
+        toast.error("사전등록 한 전화번호와 아동명을 정확히 입력해주세요");
       }
     } finally {
       setLoading(false);
